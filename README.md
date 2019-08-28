@@ -10,5 +10,7 @@ Prereq:
 Usage:
   Connect pi to phone hotspot
   Start Nginx
+  Run 'sudo -s'
   Run 'node tshark.js'
-  Open phone browser to ip address assigned to pi
+  Run 'hostname -I'
+  Go to that ip address on phone browser
