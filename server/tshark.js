@@ -42,9 +42,10 @@ function initScan() {
 
 function startScanning() {
   stop = false;
-  var targets = ["78:8a:20:54:99:8e","7a:8a:20:54:99:8e"]
+  // var targets = ["78:8a:20:54:99:8e","7a:8a:20:54:99:8e"]
+  var targets = [`\\"Dark Wolf\\"`,`\\"Dark Wolf Guest\\"`,`\\"Bottled Science\\"`]
   targetFilters = targets.map((target,index) => {
-    return `wlan.sa==${target}`
+    return `wlan.ssid==${target}`
   })
 
   if(!targets.length) {
@@ -55,10 +56,10 @@ function startScanning() {
   console.log("Starting scan...")
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlx9cefd5fc1011', //TODO: devices on pis go to wlan#, usually wlan1
+      '-i', 'wlan1', //TODO: devices on pis go to wlan#, usually wlan1
       '-l', '-Y', `"`+targetFilters.join("||")+`"`, 
       '-T', 'fields', 
-      '-e', 'wlan.sa',
+      '-e', 'wlan.ssid',
       '-e', 'wlan_radio.signal_dbm', 
       '-e', 'frame.time'],
     { stdio: ["pipe", "pipe", "ignore"], shell: true}
