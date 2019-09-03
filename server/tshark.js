@@ -44,6 +44,7 @@ function startScanning() {
   stop = false;
   // var targets = ["78:8a:20:54:99:8e","7a:8a:20:54:99:8e"]
   var targets = [`\\"Dark Wolf\\"`,`\\"Dark Wolf Guest\\"`,`\\"Bottled Science\\"`]
+  // var targets = [`\\"`]
   targetFilters = targets.map((target,index) => {
     return `wlan.ssid==${target}`
   })
@@ -52,7 +53,6 @@ function startScanning() {
     console.log("No targets, can't start scan.")
     return false
   }
-  console.log(`tshark -i wlx9cefd5fc1011 -l -Y "${targetFilters.join('||')}" -T fields -e wlan.sa -e wlan_radio.signal_dbm -e frame.time`)
   console.log("Starting scan...")
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
