@@ -1,7 +1,7 @@
 <template>
   <div>
-    <button type="button" v-on:click="startScan">Start Scan</button>
-    <button type="button" v-on:click="stopScan">Stop Scan</button>
+    <button type="button" v-on:click="startScan">Start Wifi Scan</button>
+    <button type="button" v-on:click="stopScan">Stop Wifi Scan</button>
     <div id="wifiPlot"></div>
   </div>
 </template>
@@ -60,11 +60,11 @@ export default {
       this.view.change('table', changeSet).run();
     },
     startScan() {
-      this.$service.startScanning()
-      this.$service.getResults(this.updateGraph)
+      this.$service.startWifiScanning()
+      this.$service.getWifiResults(this.updateGraph)
     },
     stopScan() {
-      this.$service.stopScanning()
+      this.$service.stopWifiScanning()
     },
   }
 }

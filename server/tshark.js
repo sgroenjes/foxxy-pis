@@ -1,4 +1,6 @@
 const express = require('express')
+const net = require('net')
+const fs = require('fs')
 const app = express()
 const port = 3000
 const {spawn,exec} = require('child_process');
@@ -6,27 +8,33 @@ app.use(express.json());
 app.use(express.static('../client/dist'))
 
 var tsharkProcess = null;
-var targetFilters = [];
-var scanResults = []
-var initProcess = false;
-var stop = false;
+var blueHydraProcess = null;
+var bluetoothScanResults = []
+var wifiTargetFilters = [];
+var wifiScanResults = []
+var wifiInitProcess = false;
+var wifiStop = false;
 
-function buildTargets(adrs) {
-  targetFilters = []
+
+/***** WIFI ********/
+/*******************/
+
+function buildWifiTargets(adrs) {
+  wifiTargetFilters = []
   adrs.forEach((adr,i) => {
     var filter = i ? `||wlan.sa==${adr}` : `wlan.sa==${adr}`;
-    targetFilters.push(filter)
+    wifiTargetFilters.push(filter)
   })
 }
 
-function initScan() {
-  if(initProcess)
+function initWifiScan() {
+  if(wifiInitProcess)
     return
-  initProcess = true;
+  wifiInitProcess = true;
   tsharkProcess.stdout.on('data', (data) => {
     var fields = data.toString().split('\t')
     if(fields.length==3 && fields[0].length)
-      scanResults.push(data.toString())
+      wifiScanResults.push(data.toString())
   })
 
   //TODO: spit this back at the user somehow
@@ -40,97 +48,196 @@ function initScan() {
   });
 }
 
-function startScanning() {
-  stop = false;
+function wifiStartScanning() {
+  wifiStop = false;
   // var targets = ["78:8a:20:54:99:8e","7a:8a:20:54:99:8e"]
   var targets = [`\\"Dark Wolf\\"`,`\\"Dark Wolf Guest\\"`,`\\"Bottled Science\\"`]
   // var targets = [`\\"`]
-  targetFilters = targets.map((target,index) => {
+  wifiTargetFilters = targets.map((target,index) => {
     return `wlan.ssid==${target}`
   })
 
-  if(!targets.length) {
+  if(!wifiTargetFilters.length) {
     console.log("No targets, can't start scan.")
     return false
   }
   console.log("Starting scan...")
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlan1', //TODO: devices on pis go to wlan#, usually wlan1
-      '-l', '-Y', `"`+targetFilters.join("||")+`"`, 
+      '-i', 'wlxe84e0673f80d',
+      '-l', '-Y', `"`+wifiTargetFilters.join("||")+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.ssid',
       '-e', 'wlan_radio.signal_dbm', 
       '-e', 'frame.time'],
     { stdio: ["pipe", "pipe", "ignore"], shell: true}
   );
-  initScan()
+  initWifiScan()
 }
 
-function stopScanning() {
+function wifiStopScanning() {
   if(tsharkProcess!=null) {
     // kills the child tshark process... assumes it will always be pid+1... bad assumption
     exec(`sudo kill ${tsharkProcess.pid+1}`)
-    initProcess = false;
+    wifiInitProcess = false;
     //TODO: kill method kills stdbuf process, but not the tshark process...
     // tsharkProcess.kill()
   }
 }
 
-app.get('/startScan', function(req, res) {
-  startScanning()
+app.get('/wifi/startScan', function(req, res) {
+  wifiStartScanning()
   res.end()
 })
 
-app.get('/stopScan', function(req,res) {
+app.get('/wifi/stopScan', function(req,res) {
   stop = true;
-  stopScanning();
+  wifiStopScanning();
   res.end()
 })
 
-app.post('/targets', function(req, res) {
+app.post('/wifi/targets', function(req, res) {
   var adrs = req.body.targets
   if(adrs && adrs.length)
-    buildTargets(adrs)
+    buildWifiTargets(adrs)
   else {
     //TODO: no targets lul, l2gitgud
   }
   res.end()
 });
 
-app.get('/results', function(req, res) {
+app.get('/wifi/results', function(req, res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   })
-  returnScan(res)
+  returnWifiScan(res)
 })
 
-function returnScan(res) {
-  if(stop) {
+function returnWifiScan(res) {
+  if(wifiStop) {
     res.end()
     return
   }
-  trimScan()
-  res.write("data: " + JSON.stringify(scanResults) + "\n\n")
-  console.log(scanResults.length+' scan results sent')
-  setTimeout(() => returnScan(res), 1000)
+  trimWifiScan()
+  res.write("data: " + JSON.stringify(wifiScanResults) + "\n\n")
+  console.log(wifiScanResults.length+' scan results sent')
+  setTimeout(() => returnWifiScan(res), 1000)
 }
 
 //remove all scans over 20s ago
-function trimScan() {
+function trimWifiScan() {
   var count = 0;
   var now = Date.now();
-  scanResults.forEach(line => {
+  wifiScanResults.forEach(line => {
     var [ssid, rssi, time] = line.split('\t');
     if(now-Date.parse(time)>=20000)
       count++;
   })
-  scanResults.splice(0,count)
-  console.log(scanResults)
+  wifiScanResults.splice(0,count)
+  console.log(wifiScanResults)
 }
 
-//TODO: do same thing for bluetooth and sdr
+/***** END WIFI ********/
+/*******************/
+
+/***** BLUETOOTH ********/
+/************************/
+
+function buildBluetoothTargets(targets) {
+  bluetoothTargets = []
+  targets = targets.map(adr => {
+    return '- '+adr.toUpperCase();
+  })
+  fs.writeFileSync('../../blue_hydra/blue_hydra.yml',
+`log_level: debug
+bt_device: hci0
+info_scan_rate: 240
+btmon_log: false
+btmon_rawlog: false
+file: false
+rssi_log: true
+aggressive_rssi: true
+ui_inc_filter_mode: :exclusive
+ui_inc_filter_mac:
+${targets.join('\n')}
+ui_inc_filter_prox: []
+ui_exc_filter_mac: []
+ui_exc_filter_prox: []
+ignore_mac: []
+signal_spitter: true
+chunker_debug: false`)
+  //TODO: write targets to blue_hydra.yml file
+}
+
+function bluetoothStartScanning() {
+  if(!bluetoothTargets.length) {
+    console.log("No targets, can't start scan.")
+    return false
+  }
+  blueHydraProcess = spawn('../../blue_hydra/bin/blue_hydra',
+    ['--rssi-api'],
+    { stdio: "ignore" }
+  );
+}
+
+function bluetoothStopScanning() {
+  if(blueHydraProcess!=null) {
+    exec(`sudo kill ${blueHydraProcess.pid}`)
+    blueHydraProcess = null
+  }
+}
+
+function returnBluetoothScan(res) {
+  var client = new net.Socket();
+  client.connect(1124, '127.0.0.1', function() {
+    //complains if you write immediately.. no idea why
+    setTimeout(() => client.write('bluetooth\n'),250);
+  })
+  client.on('data', function(data) {
+    res.write("data: " + data.toString() + "\n\n")
+    client.destroy();
+    setTimeout(() => returnBluetoothScan(res), 750)
+  })
+}
+
+app.get('/wifi/startScan', function(req, res) {
+  bluetoothStartScanning()
+  res.end()
+})
+
+app.get('/bluetooth/stopScan', function(req,res) {
+  bluetoothStop = true;
+  bluetoothStopScanning();
+  res.end()
+})
+
+app.post('/bluetooth/targets', function(req, res) {
+  var adrs = req.body.targets
+  if(adrs && adrs.length)
+    buildBluetoothTargets(adrs)
+  else {
+    //TODO: no targets lul, l2gitgud
+  }
+  res.end()
+});
+
+app.get('/bluetooth/results', function(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  })
+  returnBluetoothScan(res)
+})
+/***** END BLUETOOTH ********/
+/****************************/
+
+/***** SDR ********/
+/******************/
+
+/***** END SDR *****/
+/*******************/
 
 app.listen(port, () => console.log(`SSE app listening on port ${port}!`))
