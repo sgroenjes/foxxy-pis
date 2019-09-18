@@ -150,6 +150,7 @@ function buildBluetoothTargets(targets) {
   targets = targets.map(adr => {
     return '- '+adr.toUpperCase();
   })
+  //assumes git projects sit next to each other
   fs.writeFileSync('../../blue_hydra/blue_hydra.yml',
 `log_level: debug
 bt_device: hci0
@@ -168,7 +169,6 @@ ui_exc_filter_prox: []
 ignore_mac: []
 signal_spitter: true
 chunker_debug: false`)
-  //TODO: write targets to blue_hydra.yml file
 }
 
 function bluetoothStartScanning() {
@@ -177,7 +177,7 @@ function bluetoothStartScanning() {
     return false
   }
   blueHydraProcess = spawn('../../blue_hydra/bin/blue_hydra',
-    ['--rssi-api'],
+    ['--rssi-api', '--no-info'],
     { stdio: "ignore" }
   );
 }
@@ -196,7 +196,8 @@ function returnBluetoothScan(res) {
     setTimeout(() => client.write('bluetooth\n'),250);
   })
   client.on('data', function(data) {
-    res.write("data: " + data.toString() + "\n\n")
+    console.log(data.toString())
+    // res.write("data: " + data.toString() + "\n\n")
     client.destroy();
     setTimeout(() => returnBluetoothScan(res), 750)
   })
@@ -239,5 +240,10 @@ app.get('/bluetooth/results', function(req, res) {
 
 /***** END SDR *****/
 /*******************/
+
+// TESTING
+// bluetoothTargets = ['']
+// bluetoothStartScanning()
+// setTimeout(returnBluetoothScan,5000)
 
 app.listen(port, () => console.log(`SSE app listening on port ${port}!`))
