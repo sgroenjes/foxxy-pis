@@ -64,7 +64,7 @@ function wifiStartScanning() {
   console.log("Starting scan...")
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlxe84e0673f80d',
+      '-i', 'wlx9cefd5fc1011',
       '-l', '-Y', `"`+wifiTargetFilters.join("||")+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.ssid',
@@ -83,6 +83,7 @@ function wifiStopScanning() {
     //TODO: kill method kills stdbuf process, but not the tshark process...
     // tsharkProcess.kill()
   }
+  wifiStop = true;
 }
 
 app.get('/wifi/startScan', function(req, res) {
@@ -177,7 +178,7 @@ function bluetoothStartScanning() {
     return false
   }
   blueHydraProcess = spawn('../../blue_hydra/bin/blue_hydra',
-    ['--rssi-api', '--no-info'],
+    ['--rssi-api', '--no-info', '-d'],
     { stdio: "ignore" }
   );
 }

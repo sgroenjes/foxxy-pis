@@ -14,27 +14,64 @@ export default {
       view: null,
       results: [],
       spec: {
-        $schema: 'https://vega.github.io/schema/vega-lite/v3.json',
+        $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
         width: 1000,
-        mark: 'line',
-        encoding: {
-          x: {field: 'x', type: 'temporal'},
-          y: {field: 'y', type: 'quantitative'},
-          color: {field: 'category', type: 'nominal'}
-        }
-      },
+        height: 200,
+        legends: [{
+          stroke: "color",
+          title: "MACs/SSIDs",
+          encode: {
+            symbols: {
+              enter: {
+                strokeWidth: { value: 2 },
+                size: { value: 50 }
+              }
+            }
+          }
+        }],
+        config: {
+          axis: {
+            grid: true
+          },
+        },
+        scales: [
+          { name: 'x', type: 'time', domain: [Date.now()-21000,Date.now()], range: "width"},
+          { name: 'y', type: 'linear', domain: [-100, 0], range: "height"},
+          { name: 'color', type: 'ordinal', range: 'category', domain: { data: 'table', field: 'category', sort: true} }
+        ],
+        axes: [
+          { type: 'x', scale: 'x', orient: 'bottom', tickCount: 20},
+          { type: 'y', scale: 'y', orient: 'right', tickCount: 10}
+        ],
+        marks: [{
+          type: 'symbol',
+          shape: 'circle',
+          
+          from: {data: 'table'},
+          encode: {
+            update: {
+              x: { scale: 'x', field: 'x'},
+              y: { scale: 'y', field: 'y'},
+              stroke: { scale: 'color', field: 'category'}
+            }
+          }
+        }],
+      }
     }
   },
-  mounted() {
-    initGraph();
-  },
+  // mounted() {
+  //   this.initGraph();
+  // },
   methods: {
-    initGraph() {
-      var self = this;
-      vegaEmbed('#bluetoothPlot',this.spec, { actions: false }).then(res => {
-        self.view = res.view;
-      })
+    // initGraph() {
+    //   var self = this;
+    //   this.redraw();
+    // },
+    redraw() {
+      this.spec.scales[0].domain = [Date.now()-21000,Date.now()]
+      vegaEmbed('#bluetoothPlot',this.spec, { actions: false })
+      // setTimeout(this.redraw,1000);
     },
     updateGraph(data) {
       data = JSON.parse(data)
@@ -42,23 +79,17 @@ export default {
         return {
           x: Date.parse(datum.ts),
           y: datum.dbm,
-          category: datum.mac
+          category: datum.mac.trim()
         }
       });
-      var changeSet = this.view
-        .changeSet()
-        .insert(data)
-        .remove(function(t) {
-          return true;
-        });
-      this.view.change('table',changeSet).run();
+      this.spec.data.values = data;
     },
     startScan() {
       this.$service.startBluetoothScanning()
-      this.$service.getWifiResults(this.updateGraph)
+      this.$service.getBluetoothResults(this.updateGraph)
     },
     stopScan() {
-      this.$service.stopWifiScanning()
+      this.$service.stopBluetoothScanning()
     }
   }
 }

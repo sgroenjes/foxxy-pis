@@ -14,31 +14,59 @@ export default {
       view: null,
       results: [],
       spec: {
-        $schema: 'https://vega.github.io/schema/vega-lite/v3.json',
+        $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
         width: 1000,
-        mark: 'line',
-        encoding: {
-          x: {field: 'x', type: 'temporal'},
-          y: {field: 'y', type: 'quantitative'},
-          color: {field: 'category', type: 'nominal'}
-        }
-      },
+        height: 200,
+        legends: [{
+          stroke: "color",
+          title: "MACs/SSIDs",
+          encode: {
+            symbols: {
+              enter: {
+                strokeWidth: { value: 2 },
+                size: { value: 50 }
+              }
+            }
+          }
+        }],
+        config: {
+          axis: {
+            grid: true
+          },
+        },
+        scales: [
+          { name: 'x', type: 'time', domain: [Date.now()-21000,Date.now()], range: "width"},
+          { name: 'y', type: 'linear', domain: [-100, 0], range: "height"},
+          { name: 'color', type: 'ordinal', range: 'category', domain: { data: 'table', field: 'category', sort: true} }
+        ],
+        axes: [
+          { type: 'x', scale: 'x', orient: 'bottom', tickCount: 20},
+          { type: 'y', scale: 'y', orient: 'right', tickCount: 10}
+        ],
+        marks: [{
+          type: 'symbol',
+          shape: 'circle',
+          
+          from: {data: 'table'},
+          encode: {
+            update: {
+              x: { scale: 'x', field: 'x'},
+              y: { scale: 'y', field: 'y'},
+              stroke: { scale: 'color', field: 'category'}
+            }
+          }
+        }],
+      }
     }
   },
-  mounted() {
-    this.initGraph();
-  },
   methods: {
-    initGraph() {
-      var self = this;
-      vegaEmbed('#wifiPlot',this.spec, { actions: false }).then(res => {
-        self.view = res.view;
-      })
+    redraw() {
+      this.spec.scales[0].domain = [Date.now()-21000,Date.now()]
+      vegaEmbed('#wifiPlot',this.spec, { actions: false })
     },
     updateGraph(data) {
       data = JSON.parse(data)
-      console.log(data)
       data = data.map(datum => {
         var [ssid,rssi,time] = datum.split('\t');
         time = Date.parse(time);
@@ -46,18 +74,10 @@ export default {
         return {
           x: time,
           y: rssi,
-          category: ssid
+          category: ssid.trim()
         }
       });
-
-      console.log(data)
-      var changeSet = this.view
-        .changeset()
-        .insert(data)
-        .remove(function(t) {
-          return true;
-        });
-      this.view.change('table', changeSet).run();
+      this.spec.data.values = data;
     },
     startScan() {
       this.$service.startWifiScanning()

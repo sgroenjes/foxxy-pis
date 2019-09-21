@@ -1,8 +1,8 @@
 <template>
   <div id="app">
-    <wifi/>
-    <bluetooth/>
-    <sdr/>
+    <wifi ref="wifi"/>
+    <bluetooth ref="bt"/>
+    <sdr ref="sdr"/>
   </div>
 </template>
 
@@ -17,6 +17,17 @@ export default {
     wifi,
     sdr,
     bluetooth
+  },
+  mounted() {
+    this.redraw()
+  },
+  methods: {
+    redraw() {
+      this.$refs.bt.redraw()
+      this.$refs.wifi.redraw()
+      this.$refs.sdr.redraw()
+      setTimeout(this.redraw,1000)
+    }
   }
 }
 </script>
