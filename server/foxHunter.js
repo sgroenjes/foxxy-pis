@@ -9,7 +9,7 @@ app.use(express.static('../client/dist'))
 
 var tsharkProcess = null;
 var blueHydraProcess = null;
-var bluetoothScanResults = []
+var bluetoothTargets = []
 var wifiTargetFilters = [];
 var wifiScanResults = []
 var wifiInitProcess = false;
@@ -51,7 +51,7 @@ function initWifiScan() {
 function wifiStartScanning() {
   wifiStop = false;
   // var targets = ["78:8a:20:54:99:8e","7a:8a:20:54:99:8e"]
-  var targets = [`\\"Dark Wolf\\"`,`\\"Dark Wolf Guest\\"`,`\\"Bottled Science\\"`]
+  var targets = [`\\"Dark Wolf\\"`,`\\"Dark Wolf Guest\\"`,`\\"Samsung Galaxy S7 edge 1879\\"`]
   // var targets = [`\\"`]
   wifiTargetFilters = targets.map((target,index) => {
     return `wlan.ssid==${target}`
@@ -61,10 +61,9 @@ function wifiStartScanning() {
     console.log("No targets, can't start scan.")
     return false
   }
-  console.log("Starting scan...")
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlxe84e0673f80d',
+      '-i', 'wlx9cefd5fc1011',
       '-l', '-Y', `"`+wifiTargetFilters.join("||")+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.ssid',
@@ -122,7 +121,6 @@ function returnWifiScan(res) {
   }
   trimWifiScan()
   res.write("data: " + JSON.stringify(wifiScanResults) + "\n\n")
-  console.log(wifiScanResults.length+' scan results sent')
   setTimeout(() => returnWifiScan(res), 1000)
 }
 
@@ -136,7 +134,6 @@ function trimWifiScan() {
       count++;
   })
   wifiScanResults.splice(0,count)
-  console.log(wifiScanResults)
 }
 
 /***** END WIFI ********/
@@ -172,12 +169,12 @@ chunker_debug: false`)
 }
 
 function bluetoothStartScanning() {
-  if(!bluetoothTargets.length) {
-    console.log("No targets, can't start scan.")
-    return false
-  }
+  // if(!bluetoothTargets.length) {
+  //   console.log("No targets, can't start scan.")
+  //   return false
+  // }
   blueHydraProcess = spawn('../../blue_hydra/bin/blue_hydra',
-    ['--rssi-api', '--no-info'],
+    ['--rssi-api', '--no-info', '-d'],
     { stdio: "ignore" }
   );
 }
@@ -196,14 +193,16 @@ function returnBluetoothScan(res) {
     setTimeout(() => client.write('bluetooth\n'),250);
   })
   client.on('data', function(data) {
-    console.log(data.toString())
-    // res.write("data: " + data.toString() + "\n\n")
+    res.write("data: " + data.toString() + "\n\n")
     client.destroy();
     setTimeout(() => returnBluetoothScan(res), 750)
   })
+  client.on('error', function(err) {
+    console.log(err)
+  })
 }
 
-app.get('/wifi/startScan', function(req, res) {
+app.get('/bluetooth/startScan', function(req, res) {
   bluetoothStartScanning()
   res.end()
 })
@@ -230,7 +229,7 @@ app.get('/bluetooth/results', function(req, res) {
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   })
-  returnBluetoothScan(res)
+  setTimeout(() => returnBluetoothScan(res),1000)
 })
 /***** END BLUETOOTH ********/
 /****************************/

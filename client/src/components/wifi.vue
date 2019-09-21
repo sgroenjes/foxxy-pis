@@ -1,7 +1,7 @@
 <template>
   <div>
-    <button type="button" v-on:click="startScan">Start Wifi Scan</button>
-    <button type="button" v-on:click="stopScan">Stop Wifi Scan</button>
+    <v-btn v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
+    <v-btn v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
     <div id="wifiPlot"></div>
   </div>
 </template>
@@ -12,15 +12,16 @@ export default {
   data() {
     return {
       view: null,
+      started: false,
       results: [],
       spec: {
-        $schema: 'https://vega.github.io/schema/vega-lite/v3.json',
+        $schema: 'https://vega.github.io/schema/vega-lite/v4.json',
         data: {name: 'table'},
         width: 1000,
-        mark: 'line',
+        mark: 'point',
         encoding: {
-          x: {field: 'x', type: 'temporal'},
-          y: {field: 'y', type: 'quantitative'},
+          x: {field: 'x', type: 'temporal', scale: { domain: [Date.now()-20000, Date.now()]}},
+          y: {field: 'y', type: 'quantitative', scale: { domain: [-100, 0]} },
           color: {field: 'category', type: 'nominal'}
         }
       },
@@ -34,11 +35,16 @@ export default {
       var self = this;
       vegaEmbed('#wifiPlot',this.spec, { actions: false }).then(res => {
         self.view = res.view;
+        self.moveTime()
       })
+    },
+    moveTime() {
+      var scaleX = this.view.scale("x")
+      scaleX.domain([Date.now()-20000, Date.now()])
+      setTimeout(this.moveTime,1000);
     },
     updateGraph(data) {
       data = JSON.parse(data)
-      console.log(data)
       data = data.map(datum => {
         var [ssid,rssi,time] = datum.split('\t');
         time = Date.parse(time);
@@ -49,8 +55,6 @@ export default {
           category: ssid
         }
       });
-
-      console.log(data)
       var changeSet = this.view
         .changeset()
         .insert(data)
@@ -60,10 +64,12 @@ export default {
       this.view.change('table', changeSet).run();
     },
     startScan() {
+      this.started = true;
       this.$service.startWifiScanning()
       this.$service.getWifiResults(this.updateGraph)
     },
     stopScan() {
+      this.started = false;
       this.$service.stopWifiScanning()
     },
   }
