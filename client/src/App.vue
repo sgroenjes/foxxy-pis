@@ -1,9 +1,15 @@
 <template>
-  <div id="app">
-    <wifi/>
-    <bluetooth/>
-    <sdr/>
-  </div>
+  <v-app>
+    <v-content>
+      <v-container class="fill-height" fluid>
+        <v-row align="center" justify="center">
+          <wifi ref="wifi"/>
+          <bluetooth ref="bt"/>
+          <sdr ref="sdr"/>
+        </v-row>
+      </v-container>
+    </v-content>
+  </v-app>
 </template>
 
 <script>
@@ -17,17 +23,23 @@ export default {
     wifi,
     sdr,
     bluetooth
+  },
+  mounted() {
+    var self = this
+    this.redraw()
+    this.$service.getAllTargets().then(data => {
+      self.$refs.wifi.setTargets(data.wifiTargets, data.wifiStopped)
+      self.$refs.bt.setTargets(data.bluetoothTargets, data.bluetoothStopped)
+      // self.$refs.sdr.setState(data.sdrStopped)
+    })
+  },
+  methods: {
+    redraw() {
+      this.$refs.bt.redraw()
+      this.$refs.wifi.redraw()
+      this.$refs.sdr.redraw()
+      setTimeout(this.redraw,1000)
+    }
   }
 }
 </script>
-
-<style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>

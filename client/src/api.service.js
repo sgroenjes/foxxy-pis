@@ -3,6 +3,12 @@ var Service = function Service(axios) {
   this.source = null;
   this.callback = null;
 };
+
+Service.prototype.getAllTargets = async function() {
+  let response = await this.$http.get('/targets')
+  return response.data
+}
+
 /******* WIFI *******
  * 
  * 

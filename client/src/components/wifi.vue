@@ -1,7 +1,65 @@
 <template>
   <div>
-    <v-btn v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
-    <v-btn v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
+    <div class="text-center">
+      <v-dialog v-model="dialog" max-width="800">
+        <template v-slot:activator="{ on }">
+          <v-btn v-on="on" class="mr-5" color="#0000ff">Wifi Targets</v-btn>
+        </template>
+        <v-card>
+          <v-row no-gutters>
+            <v-col cols="7" class="pl-2" md="1">
+              <v-text-field ref='target0' v-model="targetToAdd[0]" maxlength="2" @input.native="focusNext(0)">
+                <template v-slot:append-outer>:</template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="7" class="pl-2" md="1">
+              <v-text-field ref='target1' v-model="targetToAdd[1]" maxlength="2" @input.native="focusNext(1)">
+                <template v-slot:append-outer>:</template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="7" class="pl-2" md="1">
+              <v-text-field ref='target2' v-model="targetToAdd[2]" maxlength="2" @input.native="focusNext(2)">
+                <template v-slot:append-outer>:</template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="7" class="pl-2" md="1">
+              <v-text-field ref='target3' v-model="targetToAdd[3]" maxlength="2" @input.native="focusNext(3)">
+                <template v-slot:append-outer>:</template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="7" class="pl-2" md="1">
+              <v-text-field ref='target4' v-model="targetToAdd[4]" maxlength="2" @input.native="focusNext(4)">
+                <template v-slot:append-outer>:</template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="7" class="pl-2" md="1">
+              <v-text-field ref='target5' v-model="targetToAdd[5]" maxlength="2"/>
+            </v-col>
+            <v-col cols="7" class="pa-4" md="1">
+              <v-btn color="#0000ff" v-on:click="addTarget">Add</v-btn>
+            </v-col>
+          </v-row>
+          <span v-if="error" class="red--text pl-4">Invalid target address</span>
+          <v-list-item v-if="!wifiTargets.length">
+            <v-list-item-content>
+              <v-list-item-title>No targets</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          <v-list v-if="wifiTargets.length">
+            <v-list-item v-for="(target,index) in wifiTargets" :key="index">
+              <v-list-item-content>
+                <v-list-item-title>{{target}}</v-list-item-title>
+              </v-list-item-content>
+              <v-list-item-action>
+                <v-btn v-on:click="removeFromList(index)" class="red--text" icon>X</v-btn>
+              </v-list-item-action>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </v-dialog>
+      <v-btn color="#008000" :disable="disable" v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
+      <v-btn color="#ff0000" :disable="disable" v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
+    </div>
     <div id="wifiPlot"></div>
   </div>
 </template>
@@ -13,55 +71,88 @@ export default {
     return {
       view: null,
       started: false,
-      results: [],
+      dialog: false,
+      disable: true,
+      error: false,
+      targetToAdd: ['','','','','',''],
+      wifiTargets: [],
       spec: {
-        $schema: 'https://vega.github.io/schema/vega-lite/v4.json',
+        $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
         width: 1000,
-        mark: 'point',
-        encoding: {
-          x: {field: 'x', type: 'temporal', scale: { domain: [Date.now()-20000, Date.now()]}},
-          y: {field: 'y', type: 'quantitative', scale: { domain: [-100, 0]} },
-          color: {field: 'category', type: 'nominal'}
-        }
-      },
+        height: 200,
+        legends: [{
+          stroke: "color",
+          title: "MACs",
+          encode: {
+            symbols: {
+              enter: {
+                strokeWidth: { value: 2 },
+                size: { value: 50 }
+              }
+            }
+          }
+        }],
+        config: {
+          axis: {
+            grid: true
+          },
+        },
+        scales: [
+          { name: 'x', type: 'time', domain: [Date.now()-21000,Date.now()], range: "width"},
+          { name: 'y', type: 'linear', domain: [-100, 0], range: "height"},
+          { name: 'color', type: 'ordinal', range: 'category', domain: { data: 'table', field: 'category', sort: true} }
+        ],
+        axes: [
+          { type: 'x', scale: 'x', orient: 'bottom', tickCount: 20},
+          { type: 'y', scale: 'y', orient: 'right', tickCount: 10}
+        ],
+        marks: [{
+          type: 'symbol',
+          shape: 'circle',
+          
+          from: {data: 'table'},
+          encode: {
+            update: {
+              x: { scale: 'x', field: 'x'},
+              y: { scale: 'y', field: 'y'},
+              stroke: { scale: 'color', field: 'category'},
+              fill: { scale: 'color', field: 'category'}
+            }
+          }
+        }],
+      }
     }
   },
-  mounted() {
-    this.initGraph();
+  watch: {
+    dialog(val) {
+      var self = this
+      if(val)
+        setTimeout(() => { self.$nextTick(self.$refs.target0.focus) },250)
+    }
   },
   methods: {
-    initGraph() {
-      var self = this;
-      vegaEmbed('#wifiPlot',this.spec, { actions: false }).then(res => {
-        self.view = res.view;
-        self.moveTime()
-      })
-    },
-    moveTime() {
-      var scaleX = this.view.scale("x")
-      scaleX.domain([Date.now()-20000, Date.now()])
-      setTimeout(this.moveTime,1000);
+    redraw() {
+      this.spec.scales[0].domain = [Date.now()-21000,Date.now()]
+      vegaEmbed('#wifiPlot',this.spec, { actions: false })
     },
     updateGraph(data) {
       data = JSON.parse(data)
       data = data.map(datum => {
-        var [ssid,rssi,time] = datum.split('\t');
+        var [sa,rssi,time] = datum.split('\t');
         time = Date.parse(time);
         rssi = parseInt(rssi)
         return {
           x: time,
           y: rssi,
-          category: ssid
+          category: sa.trim()
         }
       });
-      var changeSet = this.view
-        .changeset()
-        .insert(data)
-        .remove(function(t) {
-          return true;
-        });
-      this.view.change('table', changeSet).run();
+      //somehow trash can get here.. throw it out
+      data = data.filter( datum => {
+        return /[0-9a-fA-F:]{17}/.test(datum.category)
+      })
+      this.spec.data.values = data;
     },
     startScan() {
       this.started = true;
@@ -71,6 +162,41 @@ export default {
     stopScan() {
       this.started = false;
       this.$service.stopWifiScanning()
+    },
+    addTarget() {
+      let target = this.targetToAdd.join(':')
+      if(/[0-9a-fA-F:]{17}/.test(target)) {
+        this.error = false
+        this.wifiTargets.push(target)
+        this.$service.setWifiTargets(this.wifiTargets)
+        this.resetForm()
+        this.stopScan()
+      }
+      else {
+        this.error = true
+      }
+    },
+    resetForm() {
+      this.targetToAdd.map(sec => {
+        return ''
+      })
+    },
+    focusNext(index) {
+      if(this.targetToAdd[index].length==2) {
+        this.$nextTick(this.$refs[`target${index+1}`].focus)
+      }
+    },
+    removeFromList(index) {
+      this.wifiTargets.splice(index,1);
+      this.$service.setWifiTargets(this.wifiTargets)
+      this.stopScan()
+    },
+    setTargets(targets, stopped) {
+      this.wifiTargets = targets;
+      this.started = !stopped
+      if(this.started)
+        this.$service.getWifiResults(this.updateGraph)
+      this.disable = false
     },
   }
 }

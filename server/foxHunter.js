@@ -13,8 +13,24 @@ var bluetoothTargets = []
 var wifiTargetFilters = [];
 var wifiScanResults = []
 var wifiInitProcess = false;
-var wifiStop = false;
+var wifiStopped = true;
+var bluetoothStopped = true;
 
+app.get('/targets', function(req, res) {
+  //return all targets
+  //return started status
+  let obj = {}
+  obj.wifiTargets = wifiTargetFilters.map(wifitarget => {
+    return wifitarget.split('==')[1]
+  })
+  obj.bluetoothTargets = bluetoothTargets.map(bluetoothtarget => {
+    return bluetoothtarget.split('- ')[1]
+  })
+  obj.wifiStopped = wifiStopped
+  obj.bluetoothStopped = bluetoothStopped
+  // obj.sdrStopped = sdrStopped
+  res.json(obj)
+}) 
 
 /***** WIFI ********/
 /*******************/
@@ -40,6 +56,7 @@ function initWifiScan() {
   //TODO: spit this back at the user somehow
   tsharkProcess.on('error', error => {
     console.log(error)
+    wifiStopped = true
   })
 
   //TODO: spit this back at the user somehow
@@ -49,29 +66,23 @@ function initWifiScan() {
 }
 
 function wifiStartScanning() {
-  wifiStop = false;
-  // var targets = ["78:8a:20:54:99:8e","7a:8a:20:54:99:8e"]
-  var targets = [`\\"Dark Wolf\\"`,`\\"Dark Wolf Guest\\"`,`\\"Samsung Galaxy S7 edge 1879\\"`]
-  // var targets = [`\\"`]
-  wifiTargetFilters = targets.map((target,index) => {
-    return `wlan.ssid==${target}`
-  })
-
   if(!wifiTargetFilters.length) {
+    //TODO: tell client no targets
     console.log("No targets, can't start scan.")
     return false
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
       '-i', 'wlx9cefd5fc1011',
-      '-l', '-Y', `"`+wifiTargetFilters.join("||")+`"`, 
+      '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
-      '-e', 'wlan.ssid',
+      '-e', 'wlan.sa',
       '-e', 'wlan_radio.signal_dbm', 
       '-e', 'frame.time'],
     { stdio: ["pipe", "pipe", "ignore"], shell: true}
   );
   initWifiScan()
+  wifiStopped = false;
 }
 
 function wifiStopScanning() {
@@ -79,9 +90,8 @@ function wifiStopScanning() {
     // kills the child tshark process... assumes it will always be pid+1... bad assumption
     exec(`sudo kill ${tsharkProcess.pid+1}`)
     wifiInitProcess = false;
-    //TODO: kill method kills stdbuf process, but not the tshark process...
-    // tsharkProcess.kill()
   }
+  wifiStopped = true;
 }
 
 app.get('/wifi/startScan', function(req, res) {
@@ -96,12 +106,9 @@ app.get('/wifi/stopScan', function(req,res) {
 })
 
 app.post('/wifi/targets', function(req, res) {
-  var adrs = req.body.targets
-  if(adrs && adrs.length)
+  var adrs = req.body
+  if(adrs)
     buildWifiTargets(adrs)
-  else {
-    //TODO: no targets lul, l2gitgud
-  }
   res.end()
 });
 
@@ -115,7 +122,8 @@ app.get('/wifi/results', function(req, res) {
 })
 
 function returnWifiScan(res) {
-  if(wifiStop) {
+  if(wifiStopped) {
+    //TODO: return string saying its stopped
     res.end()
     return
   }
@@ -129,7 +137,7 @@ function trimWifiScan() {
   var count = 0;
   var now = Date.now();
   wifiScanResults.forEach(line => {
-    var [ssid, rssi, time] = line.split('\t');
+    var [sa, rssi, time] = line.split('\t');
     if(now-Date.parse(time)>=20000)
       count++;
   })
@@ -144,7 +152,7 @@ function trimWifiScan() {
 
 function buildBluetoothTargets(targets) {
   bluetoothTargets = []
-  targets = targets.map(adr => {
+  bluetoothTargets = targets.map(adr => {
     return '- '+adr.toUpperCase();
   })
   //assumes git projects sit next to each other
@@ -159,7 +167,7 @@ rssi_log: true
 aggressive_rssi: true
 ui_inc_filter_mode: :exclusive
 ui_inc_filter_mac:
-${targets.join('\n')}
+${bluetoothTargets.join('\n')}
 ui_inc_filter_prox: []
 ui_exc_filter_mac: []
 ui_exc_filter_prox: []
@@ -169,14 +177,15 @@ chunker_debug: false`)
 }
 
 function bluetoothStartScanning() {
-  // if(!bluetoothTargets.length) {
-  //   console.log("No targets, can't start scan.")
-  //   return false
-  // }
+  if(!bluetoothTargets.length) {
+    console.log("No targets, can't start scan.")
+    return false
+  }
   blueHydraProcess = spawn('../../blue_hydra/bin/blue_hydra',
     ['--rssi-api', '--no-info', '-d'],
     { stdio: "ignore" }
   );
+  bluetoothStopped = false
 }
 
 function bluetoothStopScanning() {
@@ -184,9 +193,15 @@ function bluetoothStopScanning() {
     exec(`sudo kill ${blueHydraProcess.pid}`)
     blueHydraProcess = null
   }
+  bluetoothStopped = false
 }
 
 function returnBluetoothScan(res) {
+  if(bluetoothStopped) {
+    //TODO: return string saying its stopped
+    res.end()
+    return
+  }
   var client = new net.Socket();
   client.connect(1124, '127.0.0.1', function() {
     //complains if you write immediately.. no idea why
@@ -199,6 +214,8 @@ function returnBluetoothScan(res) {
   })
   client.on('error', function(err) {
     console.log(err)
+    //TODO: write error back to client
+    client.destroy();
   })
 }
 
@@ -214,12 +231,9 @@ app.get('/bluetooth/stopScan', function(req,res) {
 })
 
 app.post('/bluetooth/targets', function(req, res) {
-  var adrs = req.body.targets
-  if(adrs && adrs.length)
+  var adrs = req.body
+  if(adrs)
     buildBluetoothTargets(adrs)
-  else {
-    //TODO: no targets lul, l2gitgud
-  }
   res.end()
 });
 
@@ -240,9 +254,4 @@ app.get('/bluetooth/results', function(req, res) {
 /***** END SDR *****/
 /*******************/
 
-// TESTING
-// bluetoothTargets = ['']
-// bluetoothStartScanning()
-// setTimeout(returnBluetoothScan,5000)
-
-app.listen(port, () => console.log(`SSE app listening on port ${port}!`))
+app.listen(port, () => console.log(`Foxxy Pis listening on port ${port}!`))
