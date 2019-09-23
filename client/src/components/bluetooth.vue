@@ -140,7 +140,7 @@ export default {
       data = JSON.parse(data)
       data = data.map(datum => {
         return {
-          x: Date.parse(datum.ts),
+          x: datum.ts*1000,
           y: datum.dbm,
           category: datum.mac.trim()
         }
@@ -158,6 +158,7 @@ export default {
     stopScan() {
       this.started = false;
       this.$service.stopBluetoothScanning()
+      this.spec.data.values = []
     },
     addTarget() {
       let target = this.targetToAdd.join(':')

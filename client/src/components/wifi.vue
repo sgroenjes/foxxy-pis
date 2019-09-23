@@ -162,6 +162,7 @@ export default {
     stopScan() {
       this.started = false;
       this.$service.stopWifiScanning()
+      this.spec.data.values = []
     },
     addTarget() {
       let target = this.targetToAdd.join(':')

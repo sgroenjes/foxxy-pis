@@ -12,6 +12,7 @@ var blueHydraProcess = null;
 var bluetoothTargets = []
 var wifiTargetFilters = [];
 var wifiScanResults = []
+var bluetoothScanResults = []
 var wifiInitProcess = false;
 var wifiStopped = true;
 var bluetoothStopped = true;
@@ -100,7 +101,6 @@ app.get('/wifi/startScan', function(req, res) {
 })
 
 app.get('/wifi/stopScan', function(req,res) {
-  stop = true;
   wifiStopScanning();
   res.end()
 })
@@ -186,6 +186,7 @@ function bluetoothStartScanning() {
     { stdio: "ignore" }
   );
   bluetoothStopped = false
+  setTimeout(initBluetoothConnection,1000)
 }
 
 function bluetoothStopScanning() {
@@ -193,7 +194,29 @@ function bluetoothStopScanning() {
     exec(`sudo kill ${blueHydraProcess.pid}`)
     blueHydraProcess = null
   }
-  bluetoothStopped = false
+  bluetoothStopped = true
+}
+
+function initBluetoothConnection() {
+  if(bluetoothStopped)
+    return
+  var client = new net.Socket();
+  client.connect(1124, '127.0.0.1', function() {
+    //complains if you write immediately.. no idea why
+    setTimeout(() => client.write('bluetooth\n'),250);
+  })
+  client.on('data', function(data) {
+    let btData = JSON.parse(data.toString())
+    bluetoothScanResults.push(...btData)
+    client.destroy();
+    setTimeout(() => initBluetoothConnection(), 750)
+  })
+  client.on('error', function(err) {
+    console.log(err)
+    //TODO: write error back to client
+    client.destroy();
+    setTimeout(() => initBluetoothConnection(), 750)
+  })
 }
 
 function returnBluetoothScan(res) {
@@ -202,21 +225,19 @@ function returnBluetoothScan(res) {
     res.end()
     return
   }
-  var client = new net.Socket();
-  client.connect(1124, '127.0.0.1', function() {
-    //complains if you write immediately.. no idea why
-    setTimeout(() => client.write('bluetooth\n'),250);
+  trimBluetoothScan()
+  res.write("data: " + JSON.stringify(bluetoothScanResults) + "\n\n")
+  setTimeout(() => returnBluetoothScan(res), 1000)
+}
+
+function trimBluetoothScan() {
+  var count = 0;
+  var now = Date.now();
+  bluetoothScanResults.forEach(result => {
+    if(now-(result.ts*1000)>=15000)
+      count++;
   })
-  client.on('data', function(data) {
-    res.write("data: " + data.toString() + "\n\n")
-    client.destroy();
-    setTimeout(() => returnBluetoothScan(res), 750)
-  })
-  client.on('error', function(err) {
-    console.log(err)
-    //TODO: write error back to client
-    client.destroy();
-  })
+  bluetoothScanResults.splice(0,count)
 }
 
 app.get('/bluetooth/startScan', function(req, res) {
@@ -225,7 +246,7 @@ app.get('/bluetooth/startScan', function(req, res) {
 })
 
 app.get('/bluetooth/stopScan', function(req,res) {
-  bluetoothStop = true;
+  bluetoothStopped = true;
   bluetoothStopScanning();
   res.end()
 })
