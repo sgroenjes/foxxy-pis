@@ -57,8 +57,8 @@
           </v-list>
         </v-card>
       </v-dialog>
-      <v-btn color="#008000" :disable="disable" v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
-      <v-btn color="#ff0000" :disable="disable" v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
+      <v-btn color="#008000" :disabled="disable || wifiTargets.length==0" v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
+      <v-btn color="#ff0000" :disabled="disable || wifiTargets.length==0" v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
     </div>
     <div id="wifiPlot"></div>
   </div>

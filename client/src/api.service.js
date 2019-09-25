@@ -1,7 +1,13 @@
 var Service = function Service(axios) {
   this.$http = axios;
-  this.source = null;
-  this.callback = null;
+  
+  this.wifisource = null;
+  this.btsource = null;
+  this.sdrsource = null;
+
+  this.wificallback = null;
+  this.btcallback = null;
+  this.sdrcallback = null;
 };
 
 Service.prototype.getAllTargets = async function() {
@@ -25,22 +31,22 @@ Service.prototype.startWifiScanning = async function() {
 Service.prototype.getWifiResults = function(cb) {
   var self = this;
   if(cb)
-    this.callback = cb
+    this.wificallback = cb
   var self = this;
-  this.source = new EventSource('/wifi/results')
+  this.wifisource = new EventSource('/wifi/results')
 
-  this.source.addEventListener('message', function(e) {
-    self.callback(e.data)
+  this.wifisource.addEventListener('message', function(e) {
+    self.wificallback(e.data)
   }, false)
-  this.source.addEventListener('error', function(e) {
+  this.wifisource.addEventListener('error', function(e) {
     if (e.eventPhase == EventSource.CLOSED)
-      self.source.close()
+      self.wifisource.close()
   }, false)
 }
 
 Service.prototype.stopWifiScanning = function() {
-  if(this.source!=null) {
-    this.source.close()
+  if(this.wifisource!=null) {
+    this.wifisource.close()
   }
   this.$http.get('/wifi/stopScan')
 }
@@ -61,22 +67,22 @@ Service.prototype.startBluetoothScanning = async function() {
 Service.prototype.getBluetoothResults = function(cb) {
   var self = this;
   if(cb)
-    this.callback = cb
+    this.btcallback = cb
   var self = this;
-  this.source = new EventSource('/bluetooth/results')
+  this.btsource = new EventSource('/bluetooth/results')
 
-  this.source.addEventListener('message', function(e) {
-    self.callback(e.data)
+  this.btsource.addEventListener('message', function(e) {
+    self.btcallback(e.data)
   }, false)
-  this.source.addEventListener('error', function(e) {
+  this.btsource.addEventListener('error', function(e) {
     if (e.eventPhase == EventSource.CLOSED)
-      self.source.close()
+      self.btsource.close()
   }, false)
 }
 
 Service.prototype.stopBluetoothScanning = function() {
-  if(this.source!=null) {
-    this.source.close()
+  if(this.btsource!=null) {
+    this.btsource.close()
   }
   this.$http.get('/bluetooth/stopScan')
 }
@@ -87,8 +93,8 @@ Service.prototype.stopBluetoothScanning = function() {
  * 
  * 
 **************************/
-Service.prototype.setSDRTargets = async function(targets) {
-  this.$http.post('/sdr/targets',targets);
+Service.prototype.setSDRTarget = async function(target) {
+  this.$http.post('/sdr/target',{frequency: target});
 }
 
 Service.prototype.startSDRScanning = async function() {
@@ -98,22 +104,22 @@ Service.prototype.startSDRScanning = async function() {
 Service.prototype.getSDRResults = function(cb) {
   var self = this;
   if(cb)
-    this.callback = cb
+    this.sdrcallback = cb
   var self = this;
-  this.source = new EventSource('/sdr/results')
+  this.sdrsource = new EventSource('/sdr/results')
 
-  this.source.addEventListener('message', function(e) {
-    self.callback(e.data)
+  this.sdrsource.addEventListener('message', function(e) {
+    self.sdrcallback(e.data)
   }, false)
-  this.source.addEventListener('error', function(e) {
+  this.sdrsource.addEventListener('error', function(e) {
     if (e.eventPhase == EventSource.CLOSED)
-      self.source.close()
+      self.sdrsource.close()
   }, false)
 }
 
 Service.prototype.stopSDRScanning = function() {
-  if(this.source!=null) {
-    this.source.close()
+  if(this.sdrsource!=null) {
+    this.sdrsource.close()
   }
   this.$http.get('/sdr/stopScan')
 }

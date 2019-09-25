@@ -9,13 +9,26 @@ app.use(express.static('../client/dist'))
 
 var tsharkProcess = null;
 var blueHydraProcess = null;
+var rtlPowerProcess = null;
 var bluetoothTargets = []
 var wifiTargetFilters = [];
+var sdrFrequency = null;
 var wifiScanResults = []
 var bluetoothScanResults = []
+var sdrScanResults = []
 var wifiInitProcess = false;
+var sdrInitProcess = false;
 var wifiStopped = true;
 var bluetoothStopped = true;
+var sdrStopped = true;
+
+if(process.getuid()!=0) {
+  console.log("Run this with sudo, yeah I know its stupid.. just do it")
+  return
+}
+
+// to put wifi device in monitor mode
+// exec('./monitor.sh wlan1')
 
 app.get('/targets', function(req, res) {
   //return all targets
@@ -27,9 +40,10 @@ app.get('/targets', function(req, res) {
   obj.bluetoothTargets = bluetoothTargets.map(bluetoothtarget => {
     return bluetoothtarget.split('- ')[1]
   })
+  obj.sdrTarget = sdrFrequency
   obj.wifiStopped = wifiStopped
   obj.bluetoothStopped = bluetoothStopped
-  // obj.sdrStopped = sdrStopped
+  obj.sdrStopped = sdrStopped
   res.json(obj)
 }) 
 
@@ -62,14 +76,13 @@ function initWifiScan() {
 
   //TODO: spit this back at the user somehow
   tsharkProcess.on('exit', function(code) {
-    console.log('Scanning process exited with code '+code);
+    wifiStopped = true
   });
 }
 
 function wifiStartScanning() {
   if(!wifiTargetFilters.length) {
-    //TODO: tell client no targets
-    console.log("No targets, can't start scan.")
+    console.log("This shouldn't happen.")
     return false
   }
   tsharkProcess = spawn('stdbuf',
@@ -123,7 +136,6 @@ app.get('/wifi/results', function(req, res) {
 
 function returnWifiScan(res) {
   if(wifiStopped) {
-    //TODO: return string saying its stopped
     res.end()
     return
   }
@@ -221,7 +233,6 @@ function initBluetoothConnection() {
 
 function returnBluetoothScan(res) {
   if(bluetoothStopped) {
-    //TODO: return string saying its stopped
     res.end()
     return
   }
@@ -272,7 +283,107 @@ app.get('/bluetooth/results', function(req, res) {
 /***** SDR ********/
 /******************/
 
+function buildSdrTarget(freq) {
+  sdrFrequency = freq
+}
+
+function sdrStartScanning() {
+  if(!sdrFrequency) {
+    console.log("No target frequency, can't start scan.")
+    return false
+  }
+  rtlPowerProcess = spawn('rtl_power', ['-f', `${sdrFrequency-0.1}M:${sdrFrequency+0.1}M:50k`, '-g','1','-i','1','-P'],{stdio: 'pipe'})
+  sdrStopped = false
+  initSdrScan()
+}
+
+function sdrStopScanning() {
+  if(rtlPowerProcess!=null) {
+    exec(`sudo kill -9 ${rtlPowerProcess.pid}`)
+    sdrInitProcess = false
+    rtlPowerProcess = null
+  }
+  sdrStopped = true
+}
+
+function initSdrScan() {
+  if(sdrInitProcess)
+    return
+  sdrInitProcess = true;
+  rtlPowerProcess.stdout.on('data', (data) => {
+    let line = data.toString().split(', ')
+    sdrScanResults.push({
+      ts: Date.parse(`${line[0]} ${line[1]}`),
+      dbm: parseFloat(line.slice(6,line.length).sort()[0])
+    })
+  })
+
+  rtlPowerProcess.on('error', error => {
+    //TODO: spit this back at the user somehow
+    console.log(error)
+    sdrStopped = true
+  })
+
+  rtlPowerProcess.on('exit', function(code) {
+    sdrStopped = true
+  });
+}
+
+function returnSdrScan(res) {
+  if(sdrStopped) {
+    //TODO: return string saying its stopped
+    res.end()
+    return
+  }
+  trimSdrScan()
+  res.write("data: " + JSON.stringify(sdrScanResults) + "\n\n")
+  setTimeout(() => returnSdrScan(res), 1000)
+}
+
+function trimSdrScan() {
+  var count = 0;
+  var now = Date.now();
+  sdrScanResults.forEach(result => {
+    if(now-(result.ts)>=20000)
+      count++;
+  })
+  sdrScanResults.splice(0,count)
+}
+
+app.get('/sdr/startScan', function(req, res) {
+  sdrStartScanning()
+  res.end()
+})
+
+app.get('/sdr/stopScan', function(req,res) {
+  sdrStopped = true;
+  sdrStopScanning();
+  res.end()
+})
+
+app.post('/sdr/target', function(req, res) {
+  var freq = req.body.frequency
+  if(freq)
+    buildSdrTarget(freq)
+  res.end()
+});
+
+app.get('/sdr/results', function(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  })
+  setTimeout(() => returnSdrScan(res),1000)
+})
 /***** END SDR *****/
 /*******************/
 
 app.listen(port, () => console.log(`Foxxy Pis listening on port ${port}!`))
+
+// if node gets ctrl-c, rtl process doesn't exit on sigint, send sigkill
+process.on('SIGINT', function() {
+  if(rtlPowerProcess)
+    exec(`sudo kill -9 ${rtlPowerProcess.pid}`)
+  process.exit()
+});

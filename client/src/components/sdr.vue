@@ -1,7 +1,21 @@
 <template>
   <div>
-    <v-btn color="#008000" v-if="!started" v-on:click="startScan">Start SDR Scan</v-btn>
-    <v-btn color="#ff0000" v-if="started" v-on:click="stopScan">Stop SDR Scan</v-btn>
+    <div class="text-center">
+      <v-dialog v-model="dialog" max-width="800">
+        <template v-slot:activator="{ on }">
+          <v-btn v-on="on" class="mr-5" color="#0000ff">SDR Target Frequency</v-btn>
+        </template>
+        <v-card>
+          <v-card-title>
+            <v-text-field ref='freqTarget' @change="checkFreq" v-model="freqTarget" type="number" label="Frequency Target in MHz">
+              <template v-slot:append>MHz</template>
+            </v-text-field>
+          </v-card-title>
+        </v-card>
+      </v-dialog>
+      <v-btn color="#008000" :disabled="disable || freqTarget==null" v-if="!started" v-on:click="startScan">Start SDR Scan</v-btn>
+      <v-btn color="#ff0000" :disabled="disable || freqTarget==null" v-if="started" v-on:click="stopScan">Stop SDR Scan</v-btn>
+    </div>
     <div id="sdrPlot"></div>
   </div>
 </template>
@@ -12,7 +26,11 @@ export default {
   data() {
     return {
       view: null,
-      results: [],
+      started: false,
+      dialog: false,
+      disable: true,
+      error: false,
+      freqTarget: null,
       spec: {
         $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
@@ -32,17 +50,26 @@ export default {
           { type: 'y', scale: 'y', orient: 'right', tickCount: 10}
         ],
         marks: [{
-          type: 'symbol',
-          shape: 'circle',
+          type: 'line',
+          // shape: 'circle',
           from: {data: 'table'},
           encode: {
             update: {
               x: { scale: 'x', field: 'x'},
               y: { scale: 'y', field: 'y'},
+              stroke: { value: '#0000ff' },
+              fill: { value: '#0000ff' }
             }
           }
         }],
       }
+    }
+  },
+  watch: {
+    dialog(val) {
+      var self = this
+      if(val)
+        setTimeout(()=> { self.$nextTick(self.$refs.freqTarget.focus) },250)
     }
   },
   methods: {
@@ -52,15 +79,12 @@ export default {
     },
     updateGraph(data) {
       data = JSON.parse(data)
-      // data = data.map(datum => {
-      //   var [ssid,rssi,time] = datum.split('\t');
-      //   time = Date.parse(time);
-      //   rssi = parseInt(rssi)
-      //   return {
-      //     x: time,
-      //     y: rssi
-      //   }
-      // });
+      data = data.map(datum => {
+        return {
+          x: datum.ts,
+          y: datum.dbm
+        }
+      });
       this.spec.data.values = data;
     },
     startScan() {
@@ -71,7 +95,24 @@ export default {
     stopScan() {
       this.started = false
       this.$service.stopSDRScanning()
+      this.spec.data.values = []
     },
+    setFrequency(freq, stopped) {
+      this.started = !stopped
+      this.freqTarget = freq
+      if(this.started)
+        this.$service.getSDRResults(this.updateGraph)
+      this.disable = false
+    },
+    checkFreq() {
+      let freq = parseFloat(this.freqTarget)
+      if(typeof freq != 'number' || freq == NaN)
+        this.error = true
+      else {
+        this.error = false
+        this.$service.setSDRTarget(freq)
+      }
+    }
   }
 }
 </script>

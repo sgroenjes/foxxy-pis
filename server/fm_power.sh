@@ -19,5 +19,4 @@ echo "Lower Frequency: $LOWER"
 echo "Upper Frequency: $UPPER"
 
 # Get power values over the lower and upper bounds, 200khz in 50k bins
-# TODO: return timestamp 
 rtl_power -f $LOWER:$UPPER:50k -g 1 -i 1 -P | while read line; do echo $line | cut -f7- -d , | sed s/,//g | xargs -n 1 | sort | head -1; done

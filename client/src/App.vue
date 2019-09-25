@@ -3,6 +3,8 @@
     <v-content>
       <v-container class="fill-height" fluid>
         <v-row align="center" justify="center">
+          <!-- TODO: do something with this -->
+          <v-alert v-if="error">{{error}}</v-alert>
           <wifi ref="wifi"/>
           <bluetooth ref="bt"/>
           <sdr ref="sdr"/>
@@ -24,13 +26,18 @@ export default {
     sdr,
     bluetooth
   },
+  data() {
+    return {
+      error: null
+    }
+  },
   mounted() {
     var self = this
     this.redraw()
     this.$service.getAllTargets().then(data => {
       self.$refs.wifi.setTargets(data.wifiTargets, data.wifiStopped)
       self.$refs.bt.setTargets(data.bluetoothTargets, data.bluetoothStopped)
-      // self.$refs.sdr.setState(data.sdrStopped)
+      self.$refs.sdr.setFrequency(data.sdrTarget, data.sdrStopped)
     })
   },
   methods: {
@@ -39,7 +46,7 @@ export default {
       this.$refs.wifi.redraw()
       this.$refs.sdr.redraw()
       setTimeout(this.redraw,1000)
-    }
+    },
   }
 }
 </script>

@@ -57,8 +57,8 @@
           </v-list>
         </v-card>
       </v-dialog>
-      <v-btn color="#008000" :disable="disable" v-if="!started" v-on:click="startScan">Start Bluetooth Scan</v-btn>
-      <v-btn color="#ff0000" :disable="disable" v-if="started" v-on:click="stopScan">Stop Bluetooth Scan</v-btn>
+      <v-btn color="#008000" :disabled="disable || bluetoothTargets.length==0" v-if="!started" v-on:click="startScan">Start Bluetooth Scan</v-btn>
+      <v-btn color="#ff0000" :disabled="disable || bluetoothTargets.length==0" v-if="started" v-on:click="stopScan">Stop Bluetooth Scan</v-btn>
     </div>
     <div id="bluetoothPlot"></div>
   </div>
@@ -142,7 +142,7 @@ export default {
         return {
           x: datum.ts*1000,
           y: datum.dbm,
-          category: datum.mac.trim()
+          category: datum.mac
         }
       });
       data = data.filter(datum => {
