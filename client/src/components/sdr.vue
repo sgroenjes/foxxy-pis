@@ -7,9 +7,13 @@
         </template>
         <v-card>
           <v-card-title>
-            <v-text-field ref='freqTarget' @change="checkFreq" v-model="freqTarget" type="number" label="Frequency Target in MHz">
-              <template v-slot:append>MHz</template>
-            </v-text-field>
+            <v-row no-gutters>
+              <v-col cols="12" class="pl-2" xs="10">
+                <v-text-field ref='freqTarget' @change="checkFreq" v-model="freqTarget" type="number" label="Frequency Target in MHz">
+                  <template v-slot:append>MHz</template>
+                </v-text-field>
+              </v-col>
+            </v-row>
           </v-card-title>
         </v-card>
       </v-dialog>

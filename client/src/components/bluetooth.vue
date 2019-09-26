@@ -7,35 +7,35 @@
         </template>
         <v-card>
           <v-row no-gutters>
-            <v-col cols="7" class="pl-2" md="1">
+            <v-col cols="7" class="pl-2" xs="1">
               <v-text-field ref='target0' v-model="targetToAdd[0]" maxlength="2" @input.native="focusNext(0)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" md="1">
+            <v-col cols="7" class="pl-2" xs="1">
               <v-text-field ref='target1' v-model="targetToAdd[1]" maxlength="2" @input.native="focusNext(1)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" md="1">
+            <v-col cols="7" class="pl-2" xs="1">
               <v-text-field ref='target2' v-model="targetToAdd[2]" maxlength="2" @input.native="focusNext(2)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" md="1">
+            <v-col cols="7" class="pl-2" xs="1">
               <v-text-field ref='target3' v-model="targetToAdd[3]" maxlength="2" @input.native="focusNext(3)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" md="1">
+            <v-col cols="7" class="pl-2" xs="1">
               <v-text-field ref='target4' v-model="targetToAdd[4]" maxlength="2" @input.native="focusNext(4)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" md="1">
+            <v-col cols="7" class="pl-2" xs="1">
               <v-text-field ref='target5' v-model="targetToAdd[5]" maxlength="2"/>
             </v-col>
-            <v-col cols="7" class="pa-4" md="1">
+            <v-col cols="7" class="pa-4" xs="1">
               <v-btn color="#0000ff" v-on:click="addTarget">Add</v-btn>
             </v-col>
           </v-row>
