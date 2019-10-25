@@ -28,7 +28,7 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-// exec('./monitor.sh wlan1')
+exec('sudo ./monitor.sh wlan1')
 
 app.get('/targets', function(req, res) {
   //return all targets
@@ -87,7 +87,7 @@ function wifiStartScanning() {
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlx9cefd5fc1011',
+      '-i', 'wlan1',
       '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.sa',

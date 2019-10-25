@@ -54,8 +54,8 @@ export default {
           { type: 'y', scale: 'y', orient: 'right', tickCount: 10}
         ],
         marks: [{
-          type: 'line',
-          // shape: 'circle',
+          type: 'symbol',
+          shape: 'circle',
           from: {data: 'table'},
           encode: {
             update: {
