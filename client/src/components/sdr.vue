@@ -38,8 +38,8 @@ export default {
       spec: {
         $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
-        width: 1000,
-        height: 200,
+        width: document.documentElement.clientWidth*.3,
+        height: document.documentElement.clientHeight*.9,
         config: {
           axis: {
             grid: true
@@ -78,7 +78,10 @@ export default {
   },
   methods: {
     redraw() {
+      this.spec.height = document.documentElement.clientHeight*.3
+      this.spec.width = document.documentElement.clientWidth*.9
       this.spec.scales[0].domain = [Date.now()-21000,Date.now()]
+      //TODO: add changeset to remove data older than 20s
       vegaEmbed('#sdrPlot',this.spec, { actions: false })
     },
     updateGraph(data) {
