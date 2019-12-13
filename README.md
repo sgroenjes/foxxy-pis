@@ -24,3 +24,6 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
   * ???
   * Profit
 
+### TODOs
+  * specific address is tracking --> ping
+  * others --> discovery thread
