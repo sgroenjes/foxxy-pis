@@ -1,17 +1,26 @@
 # foxxy-pis
-Node + Vue web app to help hunt foxes in wctf
+Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
 
-### Prereq:
-  * Phone with wifi hotspot
-  * Wifi interface named wlan1 in monitor mode and up
-  * Tshark
-  * Blue Hydra
-  * Nginx
+### Prereq List for self install:
+  * npm & node
+  * pm2
+  * Sam's fork of zero's fork of blue_hydra (https://github.com/sgroenjes/blue_hydra) **put this next to this repo in the same folder
+  * tshark
+  * rtl-sdr
+  * a 'wlan1' device
 
-### Usage:
-  * Connect pi to phone hotspot
-  * Start Nginx
-  * Run 'sudo -s'
-  * Run 'node tshark.js'
-  * Run 'hostname -I'
-  * Go to that ip address on phone browser
+### SETUP
+  * cd client && npm install
+  * cd server && npm install
+  * hostapd setup with wlan0, follow https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/ **don't need step 8
+  * to use the cheap edups as your wlan1 wifi interface, follow this (For RPI) https://github.com/aircrack-ng/rtl8812au
+    * OR use an interface that can be set in monitor mode and monitor bands 2.4 and 5
+  * setup nginx
+  * setup pm2 **make sure the app has sudo priveledges
+
+### USAGE
+  * Connect to your pi's network
+  * Go to localhost:3000 (or whatever port it uses, idk man..)
+  * ???
+  * Profit
+

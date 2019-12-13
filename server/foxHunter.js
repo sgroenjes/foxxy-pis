@@ -28,7 +28,15 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-exec('sudo ./monitor.sh wlan1')
+exec('sudo ./monitor.sh wlan1', (error, stdout, stderr) => {
+  if (error) {
+    console.error(`You suck at wifi, exec error: ${error}`);
+    exit(1)
+  }
+  // we hoppin' now, defaults to 1-11 & 36 -161
+  //TODO: configure to restart with select channels to monitor
+  exec('sudo ./chanhop.sh -i wlan1')
+});
 
 app.get('/targets', function(req, res) {
   //return all targets
@@ -168,6 +176,7 @@ function buildBluetoothTargets(targets) {
     return '- '+adr.toUpperCase();
   })
   //assumes git projects sit next to each other
+  //okay I know this is stupid but I'm lazy, ui inc filter prox is the bt tracking fox mac, ui inc filter mac is the list of other bt devices that beacon
   fs.writeFileSync('../../blue_hydra/blue_hydra.yml',
 `log_level: debug
 bt_device: hci0
@@ -180,7 +189,8 @@ aggressive_rssi: true
 ui_inc_filter_mode: :exclusive
 ui_inc_filter_mac:
 ${bluetoothTargets.join('\n')}
-ui_inc_filter_prox: []
+ui_inc_filter_prox: 
+- '${bluetoothTracking}'
 ui_exc_filter_mac: []
 ui_exc_filter_prox: []
 ignore_mac: []
@@ -214,7 +224,7 @@ function initBluetoothConnection() {
     return
   var client = new net.Socket();
   client.connect(1124, '127.0.0.1', function() {
-    //complains if you write immediately.. no idea why
+    //complains if you write immediately.. prob not ready? who cares just wait quarter-second
     setTimeout(() => client.write('bluetooth\n'),250);
   })
   client.on('data', function(data) {
@@ -381,7 +391,7 @@ app.get('/sdr/results', function(req, res) {
 
 app.listen(port, () => console.log(`Foxxy Pis listening on port ${port}!`))
 
-// if node gets ctrl-c, rtl process doesn't exit on sigint, send sigkill
+// if node gets ctrl-c, rtl process doesn't exit on sigint, send sigkill #iknowwhatimdoing
 process.on('SIGINT', function() {
   if(rtlPowerProcess)
     exec(`sudo kill -9 ${rtlPowerProcess.pid}`)

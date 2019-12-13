@@ -1,42 +1,42 @@
 <template>
   <div>
     <div class="text-center">
-      <v-dialog v-model="dialog" max-width="800">
+      <v-dialog v-model="dialog" max-width="90%">
         <template v-slot:activator="{ on }">
-          <v-btn v-on="on" class="mr-5" color="#0000ff">Wifi Targets</v-btn>
+          <v-btn v-on="on" x-small class="mr-5" color="#0000ff">Wifi Targets</v-btn>
         </template>
         <v-card>
           <v-row no-gutters>
-            <v-col cols="7" class="pl-2" xs="1">
+            <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target0' v-model="targetToAdd[0]" maxlength="2" @input.native="focusNext(0)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" xs="1">
+            <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target1' v-model="targetToAdd[1]" maxlength="2" @input.native="focusNext(1)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" xs="1">
+            <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target2' v-model="targetToAdd[2]" maxlength="2" @input.native="focusNext(2)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" xs="1">
+            <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target3' v-model="targetToAdd[3]" maxlength="2" @input.native="focusNext(3)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" xs="1">
+            <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target4' v-model="targetToAdd[4]" maxlength="2" @input.native="focusNext(4)">
                 <template v-slot:append-outer>:</template>
               </v-text-field>
             </v-col>
-            <v-col cols="7" class="pl-2" xs="1">
+            <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target5' v-model="targetToAdd[5]" maxlength="2"/>
             </v-col>
-            <v-col cols="7" class="pa-4" xs="1">
-              <v-btn color="#0000ff" v-on:click="addTarget">Add</v-btn>
+            <v-col cols="1" class="pa-4" xs="1">
+              <v-btn x-small color="#0000ff" v-on:click="addTarget">Add</v-btn>
             </v-col>
           </v-row>
           <span v-if="error" class="red--text pl-4">Invalid target address</span>
@@ -57,8 +57,8 @@
           </v-list>
         </v-card>
       </v-dialog>
-      <v-btn color="#008000" :disabled="disable || wifiTargets.length==0" v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
-      <v-btn color="#ff0000" :disabled="disable || wifiTargets.length==0" v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
+      <v-btn color="#008000" x-small :disabled="disable || wifiTargets.length==0" v-if="!started" v-on:click="startScan">Start Wifi Scan</v-btn>
+      <v-btn color="#ff0000" x-small :disabled="disable || wifiTargets.length==0" v-if="started" v-on:click="stopScan">Stop Wifi Scan</v-btn>
     </div>
     <div id="wifiPlot"></div>
   </div>
@@ -79,8 +79,8 @@ export default {
       spec: {
         $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
-        width: document.documentElement.clientWidth*.9,
-        height: document.documentElement.clientHeight*.3,
+        width: document.documentElement.clientWidth*.7,
+        height: document.documentElement.clientHeight*.25,
         legends: [{
           stroke: "color",
           title: "MACs",
@@ -133,8 +133,8 @@ export default {
   },
   methods: {
     redraw() {
-      this.spec.height = document.documentElement.clientHeight*.3
-      this.spec.width = document.documentElement.clientWidth*.9
+      this.spec.height = document.documentElement.clientHeight*.25
+      this.spec.width = document.documentElement.clientWidth*.7
       this.spec.scales[0].domain = [Date.now()-21000,Date.now()]
       vegaEmbed('#wifiPlot',this.spec, { actions: false })
     },

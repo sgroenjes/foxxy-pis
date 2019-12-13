@@ -1,24 +1,23 @@
 <template>
   <div>
     <div class="text-center">
-      <v-dialog v-model="dialog" max-width="800">
+      <v-dialog v-model="dialog" max-width="80%">
         <template v-slot:activator="{ on }">
-          <v-btn v-on="on" class="mr-5" color="#0000ff">SDR Target Frequency</v-btn>
+          <v-btn v-on="on" class="mr-5" x-small color="#0000ff">SDR Target Frequency</v-btn>
         </template>
         <v-card>
           <v-card-title>
             <v-row no-gutters>
               <v-col cols="12" class="pl-2" xs="10">
-                <v-text-field ref='freqTarget' @change="checkFreq" v-model="freqTarget" type="number" label="Frequency Target in MHz">
-                  <template v-slot:append>MHz</template>
+                <v-text-field ref='freqTarget' @change="checkFreq" dense v-model="freqTarget" type="number" label="Frequency Target in MHz">
                 </v-text-field>
               </v-col>
             </v-row>
           </v-card-title>
         </v-card>
       </v-dialog>
-      <v-btn color="#008000" :disabled="disable || freqTarget==null" v-if="!started" v-on:click="startScan">Start SDR Scan</v-btn>
-      <v-btn color="#ff0000" :disabled="disable || freqTarget==null" v-if="started" v-on:click="stopScan">Stop SDR Scan</v-btn>
+      <v-btn color="#008000" x-small :disabled="disable || freqTarget==null" v-if="!started" v-on:click="startScan">Start SDR Scan</v-btn>
+      <v-btn color="#ff0000" x-small :disabled="disable || freqTarget==null" v-if="started" v-on:click="stopScan">Stop SDR Scan</v-btn>
     </div>
     <div id="sdrPlot"></div>
   </div>
@@ -38,8 +37,8 @@ export default {
       spec: {
         $schema: 'https://vega.github.io/schema/vega/v5.json',
         data: {name: 'table'},
-        width: document.documentElement.clientWidth*.3,
-        height: document.documentElement.clientHeight*.9,
+        width: document.documentElement.clientWidth*.8,
+        height: document.documentElement.clientHeight*.25,
         config: {
           axis: {
             grid: true
@@ -78,8 +77,8 @@ export default {
   },
   methods: {
     redraw() {
-      this.spec.height = document.documentElement.clientHeight*.3
-      this.spec.width = document.documentElement.clientWidth*.9
+      this.spec.height = document.documentElement.clientHeight*.25
+      this.spec.width = document.documentElement.clientWidth*.7
       this.spec.scales[0].domain = [Date.now()-21000,Date.now()]
       //TODO: add changeset to remove data older than 20s
       vegaEmbed('#sdrPlot',this.spec, { actions: false })
