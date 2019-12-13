@@ -170,7 +170,7 @@ function trimWifiScan() {
 /***** BLUETOOTH ********/
 /************************/
 
-function buildBluetoothTargets(targets) {
+function buildBluetoothTargets(targets, trackingFox) {
   bluetoothTargets = []
   bluetoothTargets = targets.map(adr => {
     return '- '+adr.toUpperCase();
@@ -190,7 +190,7 @@ ui_inc_filter_mode: :exclusive
 ui_inc_filter_mac:
 ${bluetoothTargets.join('\n')}
 ui_inc_filter_prox: 
-- '${bluetoothTracking}'
+- '${trackingFox}'
 ui_exc_filter_mac: []
 ui_exc_filter_prox: []
 ignore_mac: []
@@ -273,9 +273,7 @@ app.get('/bluetooth/stopScan', function(req,res) {
 })
 
 app.post('/bluetooth/targets', function(req, res) {
-  var adrs = req.body
-  if(adrs)
-    buildBluetoothTargets(adrs)
+  buildBluetoothTargets(req.body.targets, req.body.trackingFox)
   res.end()
 });
 

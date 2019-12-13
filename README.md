@@ -23,7 +23,3 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
   * Go to localhost:3000 (or whatever port it uses, idk man..)
   * ???
   * Profit
-
-### TODOs
-  * specific address is tracking --> ping
-  * others --> discovery thread

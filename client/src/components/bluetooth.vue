@@ -35,11 +35,17 @@
             <v-col cols="1" class="pl-2" xs="1">
               <v-text-field ref='target5' v-model="targetToAdd[5]" maxlength="2"/>
             </v-col>
+            <v-col cols="2" class="pl-2" xs="1">
+              <v-checkbox v-model="tracking" label="Tracking Fox?"></v-checkbox>
+            </v-col>
             <v-col cols="1" class="pa-4" xs="1">
               <v-btn color="#0000ff" x-small v-on:click="addTarget">Add</v-btn>
             </v-col>
           </v-row>
           <span v-if="error" class="red--text pl-4">Invalid target address</span>
+          <span class="pl-2" v-if="trackingFox">Tracking Fox: {{trackingFox}}</span>
+          <v-divider></v-divider>
+          <span class="pl-2 headline">Beaconing Targets</span>
           <v-list-item v-if="!bluetoothTargets.length">
             <v-list-item-content>
               <v-list-item-title>No targets</v-list-item-title>
@@ -73,6 +79,8 @@ export default {
       started: false,
       dialog: false,
       disable: true,
+      tracking: false,
+      trackingFox: '',
       error: false,
       targetToAdd: ['','','','','',''],
       bluetoothTargets: [],
@@ -166,8 +174,11 @@ export default {
       let target = this.targetToAdd.join(':')
       if(/[0-9a-fA-F:]{17}/.test(target)) {
         this.error = false
-        this.bluetoothTargets.push(target)
-        this.$service.setBluetoothTargets(this.bluetoothTargets)
+        if(this.tracking)
+          this.trackingFox = target
+        else
+          this.bluetoothTargets.push(target)
+        this.$service.setBluetoothTargets(this.bluetoothTargets,this.trackingFox)
         this.resetForm()
         this.stopScan()
       }
@@ -184,7 +195,7 @@ export default {
     },
     removeFromList(index) {
       this.bluetoothTargets.splice(index,1)
-      this.$service.setBluetoothTargets(this.bluetoothTargets)
+      this.$service.setBluetoothTargets(this.bluetoothTargets,this.trackingFox)
       this.stopScan()
     },
     setTargets(targets, stopped) {
