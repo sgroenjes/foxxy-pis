@@ -37,10 +37,10 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col cols="3" class="pl-2" xs="1">
+            <v-col cols="6" class="pl-5" xs="1">
               <v-checkbox v-model="tracking" label="Tracking Fox?"></v-checkbox>
             </v-col>
-            <v-col cols="3" class="pa-4" xs="1">
+            <v-col cols="3" class="pl-5" xs="1">
               <v-btn color="#0000ff" x-small v-on:click="addTarget">Add</v-btn>
             </v-col>
           </v-row>
@@ -65,8 +65,8 @@
           </v-list>
         </v-card>
       </v-dialog>
-      <v-btn color="#008000" x-small :disabled="disable || bluetoothTargets.length==0" v-if="!started" v-on:click="startScan">Start Bluetooth Scan</v-btn>
-      <v-btn color="#ff0000" x-small :disabled="disable || bluetoothTargets.length==0" v-if="started" v-on:click="stopScan">Stop Bluetooth Scan</v-btn>
+      <v-btn color="#008000" x-small :disabled="disable || (bluetoothTargets.length==0 && trackingFox == '')" v-if="!started" v-on:click="startScan">Start Bluetooth Scan</v-btn>
+      <v-btn color="#ff0000" x-small :disabled="disable || (bluetoothTargets.length==0 && trackingFox == '')" v-if="started" v-on:click="stopScan">Stop Bluetooth Scan</v-btn>
     </div>
     <div id="bluetoothPlot"></div>
   </div>

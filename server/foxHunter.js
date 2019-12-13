@@ -11,6 +11,7 @@ var tsharkProcess = null;
 var blueHydraProcess = null;
 var rtlPowerProcess = null;
 var bluetoothTargets = []
+var trackingFox = ''
 var wifiTargetFilters = [];
 var sdrFrequency = null;
 var wifiScanResults = []
@@ -28,14 +29,14 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-exec('sudo ./monitor.sh wlan1', (error, stdout, stderr) => {
+exec('sudo ./monitor.sh wlp60s0mon', (error, stdout, stderr) => {
   if (error) {
     console.error(`You suck at wifi, exec error: ${error}`);
     exit(1)
   }
   // we hoppin' now, defaults to 1-11 & 36 -161
   //TODO: configure to restart with select channels to monitor
-  exec('sudo ./chanhop.sh -i wlan1')
+  exec('sudo ./chanhop.sh -i wlp60s0mon')
 });
 
 app.get('/targets', function(req, res) {
@@ -95,7 +96,7 @@ function wifiStartScanning() {
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlan1',
+      '-i', 'wlp60s0mon',
       '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.sa',
@@ -170,11 +171,12 @@ function trimWifiScan() {
 /***** BLUETOOTH ********/
 /************************/
 
-function buildBluetoothTargets(targets, trackingFox) {
+function buildBluetoothTargets(targets, fox) {
   bluetoothTargets = []
   bluetoothTargets = targets.map(adr => {
     return '- '+adr.toUpperCase();
   })
+  trackingFox = fox
   //assumes git projects sit next to each other
   //okay I know this is stupid but I'm lazy, ui inc filter prox is the bt tracking fox mac, ui inc filter mac is the list of other bt devices that beacon
   fs.writeFileSync('../../blue_hydra/blue_hydra.yml',
@@ -199,7 +201,7 @@ chunker_debug: false`)
 }
 
 function bluetoothStartScanning() {
-  if(!bluetoothTargets.length) {
+  if(!bluetoothTargets.length && trackingFox == '') {
     console.log("No targets, can't start scan.")
     return false
   }
@@ -229,6 +231,7 @@ function initBluetoothConnection() {
   })
   client.on('data', function(data) {
     let btData = JSON.parse(data.toString())
+    console.log(btData)
     bluetoothScanResults.push(...btData)
     client.destroy();
     setTimeout(() => initBluetoothConnection(), 750)
