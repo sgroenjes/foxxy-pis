@@ -37,11 +37,11 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col cols="6" class="pl-5" xs="1">
-              <v-checkbox v-model="tracking" label="Tracking Fox?"></v-checkbox>
-            </v-col>
             <v-col cols="3" class="pl-5" xs="1">
               <v-btn color="#0000ff" x-small v-on:click="addTarget">Add</v-btn>
+            </v-col>
+            <v-col cols="6" class="pl-5" xs="1">
+              <v-checkbox v-model="tracking" label="Tracking Fox?"></v-checkbox>
             </v-col>
           </v-row>
           <span v-if="error" class="red--text pl-4">Invalid target address</span>
@@ -152,8 +152,8 @@ export default {
       data = JSON.parse(data)
       data = data.map(datum => {
         return {
-          x: datum.ts*1000,
-          y: datum.dbm,
+          x: datum.ts,
+          y: datum.rssi,
           category: datum.mac
         }
       });
@@ -186,9 +186,7 @@ export default {
       }
     },
     resetForm() {
-      this.targetToAdd.map(sec => {
-        return ''
-      })
+      this.targetToAdd = ['','','','','','']
     },
     focusNext(index) {
       if(this.targetToAdd[index].length==2) {

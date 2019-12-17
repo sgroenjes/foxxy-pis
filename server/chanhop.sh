@@ -76,6 +76,7 @@ while [ -n "$1" ]; do
 	-c|--channel)
 		ARG_CHANNELS="$2 $ARG_CHANNELS"
 		shift
+		;;
 	-d|--dwelltime)
 		ARG_DWELLTIME="$2"
 		shift

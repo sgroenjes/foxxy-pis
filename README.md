@@ -4,10 +4,9 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
 ### Prereq List for self install:
   * npm & node
   * pm2
-  * Sam's fork of zero's fork of blue_hydra (https://github.com/sgroenjes/blue_hydra) **put this next to this repo in the same folder
   * tshark
   * rtl-sdr
-  * a 'wlan1' device
+  * a 'wlan1' device && hci0 device
 
 ### SETUP
   * cd client && npm install

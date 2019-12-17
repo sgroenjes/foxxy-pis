@@ -1,14 +1,14 @@
 const express = require('express')
-const net = require('net')
-const fs = require('fs')
 const app = express()
 const port = 3000
-const {spawn,exec} = require('child_process');
+const {spawn} = require('child_process');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 app.use(express.json());
 app.use(express.static('../client/dist'))
 
 var tsharkProcess = null;
-var blueHydraProcess = null;
+var bluetoothTsharkProcess = null;
 var rtlPowerProcess = null;
 var bluetoothTargets = []
 var trackingFox = ''
@@ -29,14 +29,14 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-exec('sudo ./monitor.sh wlp60s0mon', (error, stdout, stderr) => {
+exec('sudo ./monitor.sh wlan1', (error, stdout, stderr) => {
   if (error) {
     console.error(`You suck at wifi, exec error: ${error}`);
     exit(1)
   }
   // we hoppin' now, defaults to 1-11 & 36 -161
   //TODO: configure to restart with select channels to monitor
-  exec('sudo ./chanhop.sh -i wlp60s0mon')
+  exec('sudo ./chanhop.sh -i wlan1')
 });
 
 app.get('/targets', function(req, res) {
@@ -46,9 +46,7 @@ app.get('/targets', function(req, res) {
   obj.wifiTargets = wifiTargetFilters.map(wifitarget => {
     return wifitarget.split('==')[1]
   })
-  obj.bluetoothTargets = bluetoothTargets.map(bluetoothtarget => {
-    return bluetoothtarget.split('- ')[1]
-  })
+  obj.bluetoothTargets = bluetoothTargets
   obj.sdrTarget = sdrFrequency
   obj.wifiStopped = wifiStopped
   obj.bluetoothStopped = bluetoothStopped
@@ -96,7 +94,7 @@ function wifiStartScanning() {
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlp60s0mon',
+      '-i', 'wlan1',
       '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.sa',
@@ -171,77 +169,72 @@ function trimWifiScan() {
 /***** BLUETOOTH ********/
 /************************/
 
-function buildBluetoothTargets(targets, fox) {
-  bluetoothTargets = []
-  bluetoothTargets = targets.map(adr => {
-    return '- '+adr.toUpperCase();
-  })
-  trackingFox = fox
-  //assumes git projects sit next to each other
-  //okay I know this is stupid but I'm lazy, ui inc filter prox is the bt tracking fox mac, ui inc filter mac is the list of other bt devices that beacon
-  fs.writeFileSync('../../blue_hydra/blue_hydra.yml',
-`log_level: debug
-bt_device: hci0
-info_scan_rate: 240
-btmon_log: false
-btmon_rawlog: false
-file: false
-rssi_log: true
-aggressive_rssi: true
-ui_inc_filter_mode: :exclusive
-ui_inc_filter_mac:
-${bluetoothTargets.join('\n')}
-ui_inc_filter_prox: 
-- '${trackingFox}'
-ui_exc_filter_mac: []
-ui_exc_filter_prox: []
-ignore_mac: []
-signal_spitter: true
-chunker_debug: false`)
-}
-
 function bluetoothStartScanning() {
   if(!bluetoothTargets.length && trackingFox == '') {
     console.log("No targets, can't start scan.")
-    return false
+    return
   }
-  blueHydraProcess = spawn('../../blue_hydra/bin/blue_hydra',
-    ['--rssi-api', '--no-info', '-d'],
-    { stdio: "ignore" }
+  var bluetoothTargetFilter = ''
+  bluetoothTargets.forEach((adr,i) => {
+    bluetoothTargetFilter += i ? `||bthci_evt.bd_addr==${adr}` : `(bthci_evt.bd_addr==${adr}`;
+  })
+  bluetoothTargetFilter += ') and bthci_evt.rssi <= 0'
+  bluetoothTsharkProcess = spawn('stdbuf',
+    [ '-o', '0', 'tshark', 
+      '-i', 'bluetooth0',
+      '-l', '-Y', `"`+bluetoothTargetFilter+`"`, 
+      '-T', 'fields', 
+      '-e', 'bthci_evt.bd_addr',
+      '-e', 'bthci_evt.rssi', 
+      '-e', 'frame.time'],
+    { stdio: ["pipe", "pipe", "ignore"], shell: true}
   );
+  bluetoothTsharkProcess.stdout.on('data', (data) => {
+    var fields = data.toString().split('\t')
+    if(fields.length==3)
+      bluetoothScanResults.push({
+        mac: fields[0],
+        rssi: fields[1],
+        ts: new Date(fields[2]).getTime() 
+      })
+  })
+  bluetoothDiscovery()
   bluetoothStopped = false
-  setTimeout(initBluetoothConnection,1000)
+}
+
+async function bluetoothDiscovery() {
+  if(bluetoothTargets.length) {
+    try{
+      await exec('sudo hciconfig hci0 reset')
+      await exec('sudo hcitool inq --length=3');
+    }
+    catch(e) {}
+  }
+  if(trackingFox!='') {
+    try{
+      await exec('sudo hciconfig hci0 reset')
+      let { stdout } = await exec(`sudo hcitool cc ${trackingFox} && hcitool rssi ${trackingFox}`)
+      let found = stdout.match(/\d+/)
+      if(found.length) {
+        bluetoothScanResults.push({
+          mac: trackingFox,
+          rssi: `-${found[0]}`,
+          ts: Date.now()
+        })
+      }
+    }
+    catch(e) {}
+  }
+  if(!bluetoothStopped)
+    bluetoothDiscovery()
 }
 
 function bluetoothStopScanning() {
-  if(blueHydraProcess!=null) {
-    exec(`sudo kill ${blueHydraProcess.pid}`)
-    blueHydraProcess = null
+  if(bluetoothTsharkProcess!=null) {
+    exec(`sudo kill ${bluetoothTsharkProcess.pid}`)
+    bluetoothTsharkProcess = null
   }
   bluetoothStopped = true
-}
-
-function initBluetoothConnection() {
-  if(bluetoothStopped)
-    return
-  var client = new net.Socket();
-  client.connect(1124, '127.0.0.1', function() {
-    //complains if you write immediately.. prob not ready? who cares just wait quarter-second
-    setTimeout(() => client.write('bluetooth\n'),250);
-  })
-  client.on('data', function(data) {
-    let btData = JSON.parse(data.toString())
-    console.log(btData)
-    bluetoothScanResults.push(...btData)
-    client.destroy();
-    setTimeout(() => initBluetoothConnection(), 750)
-  })
-  client.on('error', function(err) {
-    console.log(err)
-    //TODO: write error back to client
-    client.destroy();
-    setTimeout(() => initBluetoothConnection(), 750)
-  })
 }
 
 function returnBluetoothScan(res) {
@@ -258,7 +251,7 @@ function trimBluetoothScan() {
   var count = 0;
   var now = Date.now();
   bluetoothScanResults.forEach(result => {
-    if(now-(result.ts*1000)>=15000)
+    if(now-(result.ts)>=15000)
       count++;
   })
   bluetoothScanResults.splice(0,count)
@@ -276,7 +269,8 @@ app.get('/bluetooth/stopScan', function(req,res) {
 })
 
 app.post('/bluetooth/targets', function(req, res) {
-  buildBluetoothTargets(req.body.targets, req.body.trackingFox)
+  bluetoothTargets = req.body.targets
+  trackingFox = req.body.trackingFox
   res.end()
 });
 

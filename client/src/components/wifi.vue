@@ -182,9 +182,7 @@ export default {
       }
     },
     resetForm() {
-      this.targetToAdd.map(sec => {
-        return ''
-      })
+      this.targetToAdd = ['','','','','','']
     },
     focusNext(index) {
       if(this.targetToAdd[index].length==2) {
