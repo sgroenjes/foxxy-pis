@@ -19,7 +19,7 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
   * setup pm2 **make sure the app has sudo priveledges
 
 ### USAGE
-  * Connect to your pi's network
+  * Connect to your pi's network, should be 192.168.4.1
   * Go to localhost:3000 (or whatever port it uses, idk man..)
   * ???
   * Profit
