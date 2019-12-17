@@ -9,7 +9,8 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
   * a 'wlan1' device && hci0 device
 
 ### SETUP
-  * cd client && npm install
+  * cd client && npm install && 
+  * npm run build (Unless it's already there, building on a pi can be slow..)
   * cd server && npm install
   * hostapd setup with wlan0, follow https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/ **don't need step 8
   * to use the cheap edups as your wlan1 wifi interface, follow this (For RPI) https://github.com/aircrack-ng/rtl8812au
