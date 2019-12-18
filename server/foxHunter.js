@@ -214,10 +214,14 @@ async function bluetoothDiscovery() {
       await exec('sudo hciconfig hci0 reset')
       let { stdout } = await exec(`sudo hcitool cc ${trackingFox} && hcitool rssi ${trackingFox}`)
       let found = stdout.match(/\d+/)
+      let rssi = parseInt(found[0])
+      rssi = rssi == 0 ? 50 :
+        rssi > 0 ? -40+rssi :
+        -60+rssi
       if(found.length) {
         bluetoothScanResults.push({
           mac: trackingFox,
-          rssi: `-${found[0]}`,
+          rssi: rssi,
           ts: Date.now()
         })
       }
