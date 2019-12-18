@@ -3,7 +3,6 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
 
 ### Prereq List for self install:
   * npm & node
-  * pm2
   * tshark
   * rtl-sdr
   * a 'wlan1' device && hci0 device
@@ -16,10 +15,22 @@ Node "omg its javascript" js + Vue web app to help hunt foxes in wctf
   * to use the cheap edups as your wlan1 wifi interface, follow this (For RPI) https://github.com/aircrack-ng/rtl8812au
     * OR use an interface that can be set in monitor mode and monitor bands 2.4 and 5
   * setup nginx
-  * setup pm2 **make sure the app has sudo priveledges
+  * setup systemd service, I used this config
+  ```
+  [Unit]
+  Description=Fox Hunter Service
+  After=hostapd.service
+
+  [Service]
+  Type=idle
+  ExecStart=/bin/bash -c 'node /home/pi/foxxy-pis/server/foxHunter.js > /home/pi/foxxy-pis/server/foxHunter.log 2>&1'
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
 
 ### USAGE
-  * Connect to your pi's network, should be 192.168.4.1
-  * Go to localhost:3000 (or whatever port it uses, idk man..)
+  * Connect to your pi's network, should be foxxyPi#
+  * Open browser to 192.168.4.1
   * ???
   * Profit
