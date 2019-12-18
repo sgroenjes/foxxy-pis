@@ -215,7 +215,7 @@ async function bluetoothDiscovery() {
       let { stdout } = await exec(`sudo hcitool cc ${trackingFox} && hcitool rssi ${trackingFox}`)
       let found = stdout.match(/\d+/)
       let rssi = parseInt(found[0])
-      rssi = rssi == 0 ? 50 :
+      rssi = rssi == 0 ?-50 :
         rssi > 0 ? -40+rssi :
         -60+rssi
       if(found.length) {
