@@ -11,10 +11,12 @@ var tsharkProcess = null;
 var bluetoothTsharkProcess = null;
 var rtlPowerProcess = null;
 var bluetoothTargets = []
+var btDescriptions = {}
 var trackingFox = ''
 var wifiTargetFilters = [];
 var sdrFrequency = null;
 var wifiScanResults = []
+var wifiDescriptions = {}
 var bluetoothScanResults = []
 var sdrScanResults = []
 var wifiInitProcess = false;
@@ -46,7 +48,10 @@ app.get('/targets', function(req, res) {
   obj.wifiTargets = wifiTargetFilters.map(wifitarget => {
     return wifitarget.split('==')[1]
   })
+  obj.wifiDescriptions = wifiDescriptions
   obj.bluetoothTargets = bluetoothTargets
+  obj.btDescriptions = btDescriptions
+  obj.trackingFox = trackingFox
   obj.sdrTarget = sdrFrequency
   obj.wifiStopped = wifiStopped
   obj.bluetoothStopped = bluetoothStopped
@@ -130,7 +135,8 @@ app.get('/wifi/stopScan', function(req,res) {
 })
 
 app.post('/wifi/targets', function(req, res) {
-  var adrs = req.body
+  var adrs = req.body.wifiTargets
+  wifiDescriptions = req.body.wifiDescriptions
   if(adrs)
     buildWifiTargets(adrs)
   res.end()
@@ -284,6 +290,7 @@ app.get('/bluetooth/stopScan', function(req,res) {
 app.post('/bluetooth/targets', function(req, res) {
   bluetoothTargets = req.body.targets
   trackingFox = req.body.trackingFox
+  btDescriptions = req.body.btDescriptions
   res.end()
 });
 

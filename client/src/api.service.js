@@ -55,8 +55,8 @@ Service.prototype.stopWifiScanning = function() {
  * 
  * 
 ***************************/
-Service.prototype.setBluetoothTargets = async function(targets, trackingFox) {
-  this.$http.post('/bluetooth/targets',{ targets, trackingFox });
+Service.prototype.setBluetoothTargets = async function(targets, trackingFox, btDescriptions) {
+  this.$http.post('/bluetooth/targets',{ targets, trackingFox, btDescriptions });
 }
 
 Service.prototype.startBluetoothScanning = async function() {

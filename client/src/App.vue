@@ -2,7 +2,7 @@
   <div id="body">
     <v-dialog v-model="settings" fullscreen hide-overlay transition="dialog-bottom-transition">
       <template v-slot:activator="{ on }">
-        <v-btn id="settings" v-on="on">Settings</v-btn>
+        <v-btn x-small id="settings" v-on="on">Settings</v-btn>
       </template>
       <v-card>
         <v-toolbar dark color="primary">
@@ -73,10 +73,10 @@
                 </v-col>
               </v-row>
               <v-row>
-                <v-col cols="2">
+                <v-col cols="8">
                   <v-text-field label="Expected RSSI in immediate proximity" v-model="wifiPowerTarget" type="number"></v-text-field>
                 </v-col>
-                <v-col cols="2">
+                <v-col cols="8">
                   <v-text-field label="Target Name" v-model="wifiTargetDescription"></v-text-field>
                 </v-col>
               </v-row>
@@ -168,7 +168,7 @@
                 </v-col>
               </v-row>
               <v-row>
-                <v-col cols="2" class="pl-5" xs="1">
+                <v-col cols="6" class="pl-5" xs="1">
                   <input type="checkbox" id="checkbox" v-model="tracking">
                   <label for="checkbox">Tracking Fox?</label>
                 </v-col>
@@ -177,16 +177,18 @@
                 </v-col>
               </v-row>
               <v-row>
-                <v-col cols="2">
+                <v-col cols="8">
                   <v-text-field label="Expected RSSI in immediate proximity" v-model="btPowerTarget" type="number"></v-text-field>
                 </v-col>
-                <v-col cols="2">
+                <v-col cols="8">
                   <v-text-field label="Target Name" v-model="btTargetDescription"></v-text-field>
                 </v-col>
               </v-row>
               </v-container>
               <span v-if="btError" class="red--text pl-4">Invalid target address</span>
-              <span class="pl-2" v-if="trackingFox">Tracking Fox: {{trackingFox+(btDescriptions[trackingFox]?' - '+btDescriptions[trackingFox]:'')}}</span>
+              <span class="pl-2" v-if="trackingFox">Tracking Fox: {{trackingFox+(btDescriptions[trackingFox]?' - '+btDescriptions[trackingFox]:'')}}
+                <v-btn v-on:click="removeTrackingFox()" class="red--text" icon>X</v-btn>
+              </span>
               <span class="pl-2 headline">Beaconing Targets</span>
               <v-list-item v-if="!btTargets.length">
                 <v-list-item-content>
@@ -231,7 +233,7 @@
           <v-list-item>
             <v-list-item-content>
               <v-row>
-                <v-col cols="2">
+                <v-col cols="8">
                   <v-text-field
                     ref="freqTarget"
                     @change="checkFreq"
@@ -240,7 +242,7 @@
                     label="Frequency Target in MHz"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="2">
+                <v-col cols="8">
                   <v-text-field label="Expected RSSI in immediate proximity" v-model="sdrPowerTarget" type="number"></v-text-field>
                 </v-col>
               </v-row>
@@ -315,8 +317,8 @@ export default {
   mounted() {
     var self = this;
     this.$service.getAllTargets().then(data => {
-      self.setWifiTargets(data.wifiTargets, data.wifiStopped);
-      self.setBtTargets(data.bluetoothTargets, data.bluetoothStopped);
+      self.setWifiTargets(data.wifiTargets, data.wifiStopped, data.wifiDescriptions);
+      self.setBtTargets({btTargets:data.bluetoothTargets,trackingFox:data.trackingFox}, data.bluetoothStopped, data.btDescriptions);
       self.setFrequency(data.sdrTarget, data.sdrStopped);
     });
     var spaceTime = d3.select("#body");
@@ -384,7 +386,7 @@ export default {
     this.space
       .append("text")
       .text("FAR")
-      .attr("font-size", "20px")
+      .attr("font-size", "16px")
       .attr("fill", "white")
       .attr(
         "transform",
@@ -409,7 +411,7 @@ export default {
     this.space
       .append("text")
       .text("NEAR")
-      .attr("font-size", "20px")
+      .attr("font-size", "16px")
       .attr("fill", "white")
       .attr(
         "transform",
@@ -433,8 +435,8 @@ export default {
       .style("stroke", "rgb(255,51,199)");
     this.space
       .append("text")
-      .text("IMMEDIATE")
-      .attr("font-size", "20px")
+      .text("CLOSE")
+      .attr("font-size", "16px")
       .attr("fill", "white")
       .attr(
         "transform",
@@ -494,8 +496,8 @@ export default {
             );
             this.wifiTargetText.push(this.space
               .append("text")
-              .text(datum.mac+(this.wifiDescriptions[datum.mac]?' ('+this.wifiDescriptions[datum.mac]+')':''))
-              .attr("font-size", "14px")
+              .text(datum.mac)
+              .attr("font-size", "10px")
               .attr("fill", "white")
               .style("text-anchor", "middle")
               .attr(
@@ -503,9 +505,24 @@ export default {
                 "translate(-" +
                   this.spaceWidth / 4 +
                   "," +
-                  (y - this.spaceHeight * 0.45 - 15) +
+                  (y - this.spaceHeight * 0.45 - 25) +
                   ")"
               ))
+            if(this.wifiDescriptions[datum.mac])
+              this.wifiTargetText.push(this.space
+                .append("text")
+                .text('('+this.wifiDescriptions[datum.mac]+')')
+                .attr("font-size", "10px")
+                .attr("fill", "white")
+                .style("text-anchor", "middle")
+                .attr(
+                  "transform",
+                  "translate(-" +
+                    this.spaceWidth / 4 +
+                    "," +
+                    (y - this.spaceHeight * 0.45 - 15) +
+                    ")"
+                ))
           } else {
             //draw the past readings that fade away
             this.wifiElementTargets.push(
@@ -548,9 +565,9 @@ export default {
       if (/[0-9a-fA-F:]{17}/.test(target)) {
         this.error = false;
         this.wifiTargets.push(target);
-        this.$service.setWifiTargets(this.wifiTargets);
         if(this.wifiTargetDescription)
           this.wifiDescriptions[target] = this.wifiTargetDescription
+        this.$service.setWifiTargets({wifiTargets:this.wifiTargets,wifiDescriptions:this.wifiDescriptions});
         this.resetForm();
         this.stopWifiScan();
       } else {
@@ -567,10 +584,12 @@ export default {
       this.$service.setWifiTargets(this.wifiTargets);
       this.stopWifiScan();
     },
-    setWifiTargets(targets, stopped) {
+    setWifiTargets(targets, stopped, descriptions) {
       this.wifiTargets = targets;
+      this.wifiDescriptions = descriptions;
       this.wifiStarted = !stopped;
-      if (this.wifiStarted) this.$service.getWifiResults(this.updateWifi);
+      if (this.wifiStarted) 
+        this.$service.getWifiResults(this.updateWifi);
       this.wifiDisable = false;
     },
     removeWifi() {
@@ -626,14 +645,25 @@ export default {
             );
             this.btTargetText.push(this.space
               .append("text")
-              .text(datum.mac+(this.btDescriptions[datum.mac]?' ('+this.btDescriptions[datum.mac]+')':''))
-              .attr("font-size", "14px")
+              .text(datum.mac)
+              .attr("font-size", "10px")
               .attr("fill", "white")
               .style("text-anchor", "middle")
               .attr(
                 "transform",
-                "translate(0," + (y - this.spaceHeight * 0.45 - 15) + ")"
+                "translate(0," + (y - this.spaceHeight * 0.45 - 25) + ")"
               ))
+            if(this.btDescriptions[datum.mac])
+              this.btTargetText.push(this.space
+                .append("text")
+                .text('('+this.btDescriptions[datum.mac]+')')
+                .attr("font-size", "10px")
+                .attr("fill", "white")
+                .style("text-anchor", "middle")
+                .attr(
+                  "transform",
+                  "translate(0," + (y - this.spaceHeight * 0.45 - 15) + ")"
+                ))
           } 
           else {
             this.btElementTargets.push(
@@ -657,16 +687,24 @@ export default {
         },this)
       },this)
     },
-    setBtTargets(targets, stopped) {
-      this.btTargets = targets;
+    setBtTargets(targets, stopped, descriptions) {
+      this.btTargets = targets.btTargets;
+      this.trackingFox = targets.trackingFox
+      this.btDescriptions = descriptions
       this.btStarted = !stopped;
-      if (this.btStarted) this.$service.getBluetoothResults(this.updateBt);
+      if (this.btStarted) 
+        this.$service.getBluetoothResults(this.updateBt);
       this.btDisable = false;
     },
     removeFromBtList(index) {
       this.btTargets.splice(index, 1);
       this.$service.setBluetoothTargets(this.btTargets, this.trackingFox);
       this.stopBtScan();
+    },
+    removeTrackingFox() {
+      this.trackingFox = ''
+      this.$service.setBluetoothTargets(this.btTargets, this.trackingFox)
+      this.stopBtScan()
     },
     startBtScan() {
       this.btStarted = true;
@@ -684,9 +722,9 @@ export default {
         this.btError = false;
         if (this.tracking) this.trackingFox = target;
         else this.btTargets.push(target);
-        this.$service.setBluetoothTargets(this.btTargets, this.trackingFox);
         if(this.btTargetDescription)
           this.btDescriptions[target] = this.btTargetDescription
+        this.$service.setBluetoothTargets(this.btTargets, this.trackingFox, this.btDescriptions);
         this.resetForm();
         this.stopBtScan();
       }
@@ -729,7 +767,7 @@ export default {
           this.sdrTargetText = this.space
             .append("text")
             .text(this.freqTarget + " MHz")
-            .attr("font-size", "14px")
+            .attr("font-size", "10px")
             .attr("fill", "white")
             .style("text-anchor", "middle")
             .attr(
@@ -808,7 +846,7 @@ export default {
 }
 #settings {
   position: absolute;
-  left: 20px;
-  top: 20px;
+  left: 10px;
+  bottom: 10px;
 }
 </style>
