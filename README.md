@@ -31,6 +31,6 @@ Nodejs + Vue web app to help hunt foxes in wctf
 
 ### USAGE
   * Connect to your pi's network, should be foxxyPi#
-  * Open browser to your assigned ip (try 192.168.4.1)
+  * Open browser to 192.168.4.1 (by default)
   * ???
   * Profit
