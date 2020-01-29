@@ -29,14 +29,14 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-exec('sudo ./monitor.sh wlx9cefd5fcce4e', (error, stdout, stderr) => {
+exec('sudo ./monitor.sh wlan1', (error, stdout, stderr) => {
   if (error) {
     console.error(`You suck at wifi, exec error: ${error}`);
     process.exit(1)
   }
   // we hoppin' now, defaults to 1-11 & 36 -161
   //TODO: configure to restart with select channels to monitor
-  exec('sudo ./chanhop.sh -i wlx9cefd5fcce4e')
+  exec('sudo ./chanhop.sh -i wlan1')
 });
 
 app.get('/targets', function(req, res) {
@@ -94,7 +94,7 @@ function wifiStartScanning() {
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlx9cefd5fcce4e',
+      '-i', 'wlan1',
       '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.sa',
