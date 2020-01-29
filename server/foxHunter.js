@@ -5,7 +5,7 @@ const {spawn} = require('child_process');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 app.use(express.json());
-app.use(express.static('/home/pi/foxxy-pis/client/dist'))
+app.use(express.static('../client/dist'))
 
 var tsharkProcess = null;
 var bluetoothTsharkProcess = null;
@@ -29,14 +29,14 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-exec('sudo /home/pi/foxxy-pis/server/monitor.sh wlan1', (error, stdout, stderr) => {
+exec('sudo ./monitor.sh wlx9cefd5fcce4e', (error, stdout, stderr) => {
   if (error) {
     console.error(`You suck at wifi, exec error: ${error}`);
-    exit(1)
+    process.exit(1)
   }
   // we hoppin' now, defaults to 1-11 & 36 -161
   //TODO: configure to restart with select channels to monitor
-  exec('sudo /home/pi/foxxy-pis/server/chanhop.sh -i wlan1')
+  exec('sudo ./chanhop.sh -i wlx9cefd5fcce4e')
 });
 
 app.get('/targets', function(req, res) {
@@ -94,7 +94,7 @@ function wifiStartScanning() {
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlan1',
+      '-i', 'wlx9cefd5fcce4e',
       '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.sa',
@@ -108,7 +108,12 @@ function wifiStartScanning() {
 
 function wifiStopScanning() {
   if(tsharkProcess!=null) {
-    exec(`sudo kill ${tsharkProcess.pid}`)
+    try{
+      exec(`ps aux | grep "tshark -i wl" | head -2 | while read line; do echo $line | cut -f2 -d ' ' | xargs sudo kill; done`)
+    }
+    catch(error){
+      console.log("Error trying to kill wifi process",error)
+    }
     wifiInitProcess = false;
   }
   wifiStopped = true;
@@ -178,25 +183,27 @@ function bluetoothStartScanning() {
     bluetoothTargetFilter += i ? `||bthci_evt.bd_addr==${adr}` : `(bthci_evt.bd_addr==${adr}`;
   })
   bluetoothTargetFilter += ') and bthci_evt.rssi <= 0'
-  bluetoothTsharkProcess = spawn('stdbuf',
-    [ '-o', '0', 'tshark', 
-      '-i', 'bluetooth0',
-      '-l', '-Y', `"`+bluetoothTargetFilter+`"`, 
-      '-T', 'fields', 
-      '-e', 'bthci_evt.bd_addr',
-      '-e', 'bthci_evt.rssi', 
-      '-e', 'frame.time'],
-    { stdio: ["pipe", "pipe", "ignore"], shell: true}
-  );
-  bluetoothTsharkProcess.stdout.on('data', (data) => {
-    var fields = data.toString().split('\t')
-    if(fields.length==3)
-      bluetoothScanResults.push({
-        mac: fields[0],
-        rssi: fields[1],
-        ts: new Date(fields[2]).getTime() 
-      })
-  })
+  if(bluetoothTargets.length){
+    bluetoothTsharkProcess = spawn('stdbuf',
+      [ '-o', '0', 'tshark', 
+        '-i', 'bluetooth0',
+        '-l', '-Y', `"`+bluetoothTargetFilter+`"`, 
+        '-T', 'fields', 
+        '-e', 'bthci_evt.bd_addr',
+        '-e', 'bthci_evt.rssi', 
+        '-e', 'frame.time'],
+      { stdio: ["pipe", "pipe", "ignore"], shell: true}
+    );
+    bluetoothTsharkProcess.stdout.on('data', (data) => {
+      var fields = data.toString().split('\t')
+      if(fields.length==3)
+        bluetoothScanResults.push({
+          mac: fields[0],
+          rssi: fields[1],
+          ts: new Date(fields[2]).getTime() 
+        })
+    })
+  }
   bluetoothDiscovery()
   bluetoothStopped = false
 }
@@ -215,9 +222,7 @@ async function bluetoothDiscovery() {
       let { stdout } = await exec(`sudo hcitool cc ${trackingFox} && hcitool rssi ${trackingFox}`)
       let found = stdout.match(/\d+/)
       let rssi = parseInt(found[0])
-      rssi = rssi == 0 ?-50 :
-        rssi > 0 ? -40+rssi :
-        -60+rssi
+      rssi = -50-rssi
       if(found.length) {
         bluetoothScanResults.push({
           mac: trackingFox,
@@ -234,7 +239,12 @@ async function bluetoothDiscovery() {
 
 function bluetoothStopScanning() {
   if(bluetoothTsharkProcess!=null) {
-    exec(`sudo kill ${bluetoothTsharkProcess.pid}`)
+    try{
+      exec(exec(`ps aux | grep "tshark -i bluetooth0" | head -2 | while read line; do echo $line | cut -f2 -d ' ' | xargs sudo kill; done`))
+    }
+    catch(error) {
+      console.log("Error trying to kill bluetooth process",error)
+    }
     bluetoothTsharkProcess = null
   }
   bluetoothStopped = true
@@ -307,7 +317,12 @@ function sdrStartScanning() {
 
 function sdrStopScanning() {
   if(rtlPowerProcess!=null) {
-    exec(`sudo kill -9 ${rtlPowerProcess.pid}`)
+    try{
+      exec(`sudo kill -9 ${rtlPowerProcess.pid}`)
+    }
+    catch(error) {
+      console.log("Error trying to kill the SDR process",error)
+    }
     sdrInitProcess = false
     rtlPowerProcess = null
   }
@@ -391,7 +406,13 @@ app.listen(port, () => console.log(`Foxxy Pis listening on port ${port}!`))
 
 // if node gets ctrl-c, rtl process doesn't exit on sigint, send sigkill #iknowwhatimdoing
 process.on('SIGINT', function() {
-  if(rtlPowerProcess)
-    exec(`sudo kill -9 ${rtlPowerProcess.pid}`)
+  if(rtlPowerProcess){
+    try{
+      exec(`sudo kill -9 ${rtlPowerProcess.pid}`)
+    }
+    catch(error){
+      console.log("Error trying to kill SDR process",error)
+    }
+  }
   process.exit()
 });

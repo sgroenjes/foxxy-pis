@@ -32,7 +32,6 @@ Service.prototype.getWifiResults = function(cb) {
   var self = this;
   if(cb)
     this.wificallback = cb
-  var self = this;
   this.wifisource = new EventSource('/wifi/results')
 
   this.wifisource.addEventListener('message', function(e) {
@@ -68,7 +67,6 @@ Service.prototype.getBluetoothResults = function(cb) {
   var self = this;
   if(cb)
     this.btcallback = cb
-  var self = this;
   this.btsource = new EventSource('/bluetooth/results')
 
   this.btsource.addEventListener('message', function(e) {
@@ -105,7 +103,6 @@ Service.prototype.getSDRResults = function(cb) {
   var self = this;
   if(cb)
     this.sdrcallback = cb
-  var self = this;
   this.sdrsource = new EventSource('/sdr/results')
 
   this.sdrsource.addEventListener('message', function(e) {
@@ -124,7 +121,7 @@ Service.prototype.stopSDRScanning = function() {
   this.$http.get('/sdr/stopScan')
 }
 
-function plugin(Vue, options) {
+function plugin(Vue) {
   if(plugin.installed)
     return;
   plugin.installed = true;
