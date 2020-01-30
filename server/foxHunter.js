@@ -5,7 +5,7 @@ const {spawn} = require('child_process');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 app.use(express.json());
-app.use(express.static('/home/pi/foxxy-pis/client/dist'))
+app.use(express.static('../client/dist'))
 
 var tsharkProcess = null;
 var bluetoothTsharkProcess = null;
@@ -31,14 +31,14 @@ if(process.getuid()!=0) {
 }
 
 // to put wifi device in monitor mode
-exec('sudo /home/pi/foxxy-pis/server/monitor.sh wlan1', (error, stdout, stderr) => {
+exec('sudo ./monitor.sh wlx9cefd5fcce4e', (error, stdout, stderr) => {
   if (error) {
     console.error(`You suck at wifi, exec error: ${error}`);
     process.exit(1)
   }
   // we hoppin' now, defaults to 1-11 & 36 -161
   //TODO: configure to restart with select channels to monitor
-  exec('sudo /home/pi/foxxy-pis/server/chanhop.sh -i wlan1')
+  exec('sudo ./chanhop.sh -i wlx9cefd5fcce4e')
 });
 
 app.get('/targets', function(req, res) {
@@ -65,9 +65,10 @@ app.get('/targets', function(req, res) {
 function buildWifiTargets(adrs) {
   wifiTargetFilters = []
   adrs.forEach((adr,i) => {
-    var filter = i ? `||wlan.sa==${adr}` : `wlan.sa==${adr}`;
+    var filter = i ? `||wlan.sa==${adr}` : `(wlan.sa==${adr}`;
     wifiTargetFilters.push(filter)
   })
+  wifiTargetFilters.push(")&&wlan.da==ff:ff:ff:ff:ff:ff")
 }
 
 function initWifiScan() {
@@ -99,7 +100,7 @@ function wifiStartScanning() {
   }
   tsharkProcess = spawn('stdbuf',
     [ '-o', '0', 'tshark', 
-      '-i', 'wlan1',
+      '-i', 'wlx9cefd5fcce4e',
       '-l', '-Y', `"`+wifiTargetFilters.join('')+`"`, 
       '-T', 'fields', 
       '-e', 'wlan.sa',
